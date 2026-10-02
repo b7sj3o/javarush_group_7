@@ -1,0 +1,67 @@
+
+services:
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+    ports:
+      - "8000-8009:8000-8009"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    volumes:
+      - ./images:/app/images
+      - ./logs:/app/logs
+    restart: always
+  
+  nginx:
+    image: nginx:stable-alpine3.21-perl # FIXME: краще використовувати певну версію
+    ports:
+      - "80:80" # http
+      # - "443:443" # https
+    depends_on:
+      - backend
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro # read only
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./images:/usr/share/nginx/images:ro
+    restart: always
+  
+  postgres:
+    image: postgres:17
+    container_name: postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_HOST: ${DB_HOST}
+      POSTGRES_PORT: ${DB_PORT}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/1-init.sql:/docker-entrypoint-initdb.d/1-init.sql:ro
+      - ./backups:/backups
+
+  # Sidecar: автоматичні бекапи раз на 2 години, поки запущений compose.
+  backup:
+    image: postgres:17          # той самий образ — у ньому вже є pg_dump
+    container_name: backup
+    env_file:
+      - .env
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}  # pg_dump по мережі потребує пароль
+      INTERVAL: 7200              # пауза між бекапами в секундах (2 год)
+    depends_on:
+      - postgres
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["sh", "/backups/auto-backup.sh"]
+    restart: always
+
+
+volumes:
+  postgres_data:

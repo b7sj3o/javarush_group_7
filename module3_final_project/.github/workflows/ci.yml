@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:17-alpine
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: final3
+        options: >-
+          --health-cmd "pg_isready -U postgres -d final3"
+          --health-interval 5s
+          --health-retries 10
+
+    env:
+      SECRET_KEY: ci-secret
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/final3
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      ALLOWED_HOSTS: shop.example.com
+      EMAIL_HOST: smtp.resend.com
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy .
+      - run: uv run pytest
+      - run: |
+          export SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(50))")
+          uv run manage.py check --deploy --fail-level WARNING
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Production image builds (collectstatic included)
+        run: docker build -t hop-and-barley .

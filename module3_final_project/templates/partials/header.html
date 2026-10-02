@@ -1,0 +1,37 @@
+{% load static %}
+<header>
+    <div class="header-container">
+        <a href="{% url 'catalog:home' %}" class="header__logo">
+            <img src="{% static 'img/logo.svg' %}" alt="{{ SHOP_NAME }} Logo">
+            <p class="logo-text">{{ SHOP_NAME }}</p>
+        </a>
+        <nav class="header__nav">
+            <ul>
+                <li><a href="{% url 'catalog:product_list' %}">Каталог</a></li>
+                <li><a href="#">Гайди й рецепти</a></li>
+                <li><a href="#">Спільнота</a></li>
+                <li><a href="#">Ресурси</a></li>
+                <li><a href="#">Контакти</a></li>
+            </ul>
+        </nav>
+
+        {% if user.is_authenticated %}
+            <!-- Block for authorized user -->
+            <div class="header__user-actions" id="auth-user">
+                <a href="{% url 'accounts:profile' %}" class="user-icon" aria-label="Мій кабінет">
+                    <img src="{% static 'img/icons/User_alt.svg' %}" alt="Мій кабінет">
+                </a>
+                <a href="{% url 'orders:cart' %}" class="cart-icon" aria-label="Кошик">
+                    <img src="{% static 'img/icons/Shopping_bag.svg' %}" alt="Кошик">
+                    {% if cart_count %}<span class="header__cart-count">{{ cart_count }}</span>{% endif %}
+                </a>
+            </div>
+        {% else %}
+            <!-- Block for unauthorized user -->
+            <div class="header__auth-buttons" id="auth-guest">
+                <a href="{% url 'accounts:login' %}" class="button button--secondary">Увійти</a>
+                <a href="{% url 'accounts:register' %}" class="button button--primary">Реєстрація</a>
+            </div>
+        {% endif %}
+    </div>
+</header>

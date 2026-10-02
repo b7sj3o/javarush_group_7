@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens for ПОТУЖНО Shop.
+ * Tailwind v4 turns every --color-* / --font-* token into utilities:
+ * e.g. bg-paper, text-ink, border-line, font-display.
+ */
+@theme {
+  --color-paper: #f6f6f4; /* page background */
+  --color-card: #ffffff;
+  --color-ink: #17151f; /* primary text, near-black with a violet cast */
+  --color-muted: #6e6a7a; /* secondary text */
+  --color-line: #e5e3ec; /* hairline borders */
+
+  --color-accent: #5a2fd1; /* brand violet, evolved from the templates' #6f42c1 */
+  --color-accent-deep: #47249f;
+  --color-accent-soft: #efeafb;
+
+  --color-volt: #ffd335; /* rating stars, highlight badges */
+  --color-volt-soft: #fff5cc;
+
+  --color-danger: #d33a2c;
+  --color-danger-soft: #fdeceb;
+
+  --font-display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --font-sans: "Golos Text", system-ui, "Segoe UI", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+
+  /* Visible keyboard focus everywhere, in brand color */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+/*
+ * Small set of reusable component classes so pages don't repeat
+ * long utility chains for the same control.
+ */
+@layer components {
+  /* Shared button base + three variants */
+  .btn-primary,
+  .btn-outline,
+  .btn-danger {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg
+      px-4 py-2 text-sm font-semibold transition-colors
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-white hover:bg-accent-deep;
+  }
+
+  .btn-outline {
+    @apply border border-line bg-card hover:border-accent hover:text-accent;
+  }
+
+  .btn-danger {
+    @apply border border-danger/30 bg-card text-danger hover:bg-danger-soft;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-line bg-card px-3 py-2 text-sm
+      placeholder:text-muted/60 focus:border-accent;
+  }
+
+  .field-label {
+    @apply mb-1 block text-xs font-semibold tracking-wide text-muted uppercase;
+  }
+
+  .field-error {
+    @apply mt-1 text-xs text-danger;
+  }
+
+  .card {
+    @apply rounded-xl border border-line bg-card;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium;
+  }
+}

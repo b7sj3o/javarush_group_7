@@ -1,0 +1,49 @@
+services:
+
+  app:
+    build: .
+    container_name: image_server_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./images:/images
+      - ./logs:/logs
+    environment:
+      DB_HOST:     db
+      DB_PORT:     "5432"
+      DB_NAME:     images_db
+      DB_USER:     postgres
+      DB_PASSWORD: password
+    depends_on:
+      - db
+
+  nginx:
+    image: nginx:latest
+    container_name: image_server_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./images:/images:ro
+      - ./frontend/static:/static:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+
+  db:
+    image: postgres:latest
+    container_name: image_server_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       images_db
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  db_data:

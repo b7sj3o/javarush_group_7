@@ -1,0 +1,1775 @@
+openapi: 3.0.3
+info:
+  title: ПОТУЖНО Shop API
+  version: 1.0.0
+  description: API інтернет-магазину одягу та взуття
+paths:
+  /api/v1/auth/register/:
+    post:
+      operationId: v1_auth_register_create
+      description: |-
+        POST /api/v1/auth/register/ — аналог register() з apps.accounts.views.
+
+        Шаблонна в'юшка після створення користувача одразу логінила його
+        (login(request, user)). Для API "залогінити" = видати пару JWT-токенів,
+        тому повертаємо їх разом із даними користувача.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Register'
+          description: ''
+  /api/v1/brands/:
+    get:
+      operationId: v1_brands_list
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page_number
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBrandList'
+          description: ''
+    post:
+      operationId: v1_brands_create
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Brand'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Brand'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Brand'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+          description: ''
+  /api/v1/brands/{id}/:
+    get:
+      operationId: v1_brands_retrieve
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this brand.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+          description: ''
+    put:
+      operationId: v1_brands_update
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this brand.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Brand'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Brand'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Brand'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+          description: ''
+    patch:
+      operationId: v1_brands_partial_update
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this brand.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBrand'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBrand'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBrand'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+          description: ''
+    delete:
+      operationId: v1_brands_destroy
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this brand.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/categories/:
+    get:
+      operationId: v1_categories_list
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page_number
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategoryList'
+          description: ''
+    post:
+      operationId: v1_categories_create
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Category'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Category'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+  /api/v1/categories/{id}/:
+    get:
+      operationId: v1_categories_retrieve
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this category.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+    put:
+      operationId: v1_categories_update
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this category.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Category'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Category'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+    patch:
+      operationId: v1_categories_partial_update
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this category.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCategory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCategory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCategory'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+    delete:
+      operationId: v1_categories_destroy
+      description: |-
+        Category/Brand звʼязані з Product через on_delete=PROTECT: видалення запису,
+        на який посилаються товари, кидає ProtectedError. Без цього міксина DRF
+        відповів би 500 — перетворюємо на зрозумілий 409 Conflict.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this category.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/contact/:
+    post:
+      operationId: v1_contact_create
+      description: |-
+        POST /api/v1/contact/ — аналог contact() з apps.shop.views.
+
+        Як і шаблонна версія, нікуди не зберігає звернення — тільки пише в консоль
+        (у шаблонах був print, тут — логер, як у сигналах accounts).
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/products/:
+    get:
+      operationId: v1_products_list
+      parameters:
+      - in: query
+        name: audience
+        schema:
+          type: array
+          items:
+            type: string
+            title: Аудиторія
+            enum:
+            - man
+            - unisex
+            - woman
+        description: |-
+          * `unisex` - Унісекс
+          * `man` - Чоловіче
+          * `woman` - Жіноче
+        explode: true
+        style: form
+      - in: query
+        name: brand
+        schema:
+          type: array
+          items:
+            type: string
+        explode: true
+        style: form
+      - in: query
+        name: category
+        schema:
+          type: array
+          items:
+            type: string
+        explode: true
+        style: form
+      - in: query
+        name: in_stock
+        schema:
+          type: boolean
+        description: Чи є в наявності
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: is_featured
+        schema:
+          type: boolean
+      - in: query
+        name: max_price
+        schema:
+          type: number
+      - in: query
+        name: min_price
+        schema:
+          type: number
+      - in: query
+        name: min_rating
+        schema:
+          type: number
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page_number
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: size
+        schema:
+          type: array
+          items:
+            type: string
+        explode: true
+        style: form
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductReadList'
+          description: ''
+    post:
+      operationId: v1_products_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductWrite'
+          description: ''
+  /api/v1/products/{slug}/:
+    get:
+      operationId: v1_products_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductRead'
+          description: ''
+    put:
+      operationId: v1_products_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductWrite'
+          description: ''
+    patch:
+      operationId: v1_products_partial_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProductWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProductWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProductWrite'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductWrite'
+          description: ''
+    delete:
+      operationId: v1_products_destroy
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/products/{slug}/favourite/:
+    post:
+      operationId: v1_products_favourite_create
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRead'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductRead'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductRead'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductRead'
+          description: ''
+    delete:
+      operationId: v1_products_favourite_destroy
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/products/{slug}/reviews/:
+    get:
+      operationId: v1_products_reviews_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductRead'
+          description: ''
+  /api/v1/products/favourites/:
+    get:
+      operationId: v1_products_favourites_retrieve
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductRead'
+          description: ''
+  /api/v1/products/featured/:
+    get:
+      operationId: v1_products_featured_retrieve
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductRead'
+          description: ''
+  /api/v1/reviews/:
+    get:
+      operationId: v1_reviews_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page_number
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReviewReadList'
+          description: ''
+    post:
+      operationId: v1_reviews_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewWrite'
+          description: ''
+  /api/v1/reviews/{id}/:
+    get:
+      operationId: v1_reviews_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewRead'
+          description: ''
+    put:
+      operationId: v1_reviews_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewWrite'
+          description: ''
+    patch:
+      operationId: v1_reviews_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewWrite'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewWrite'
+          description: ''
+    delete:
+      operationId: v1_reviews_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/reviews/mine/:
+    get:
+      operationId: v1_reviews_mine_retrieve
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewWrite'
+          description: ''
+  /api/v1/sizes/:
+    get:
+      operationId: v1_sizes_list
+      description: Довідник розмірів — потрібен формі товару в React (чекбокси розмірів).
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Size'
+          description: ''
+  /api/v1/sizes/{id}/:
+    get:
+      operationId: v1_sizes_retrieve
+      description: Довідник розмірів — потрібен формі товару в React (чекбокси розмірів).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this size.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Size'
+          description: ''
+  /api/v1/token/:
+    post:
+      operationId: v1_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/v1/token/refresh/:
+    post:
+      operationId: v1_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/users/me/:
+    get:
+      operationId: v1_users_me_retrieve
+      description: |-
+        GET /api/v1/users/me/ — дані поточного користувача (аналог profile view).
+        PATCH — оновлення email та phone/address з Profile.
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: v1_users_me_partial_update
+      description: |-
+        GET /api/v1/users/me/ — дані поточного користувача (аналог profile view).
+        PATCH — оновлення email та phone/address з Profile.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+components:
+  schemas:
+    AudienceEnum:
+      enum:
+      - unisex
+      - man
+      - woman
+      type: string
+      description: |-
+        * `unisex` - Унісекс
+        * `man` - Чоловіче
+        * `woman` - Жіноче
+    Brand:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - name
+      - slug
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - slug
+    PaginatedBrandList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_number=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_number=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Brand'
+    PaginatedCategoryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_number=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_number=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+    PaginatedProductReadList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_number=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_number=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductRead'
+    PaginatedReviewReadList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_number=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page_number=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewRead'
+    PatchedBrand:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+    PatchedCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedProductWrite:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        category:
+          type: integer
+        brand:
+          type: integer
+        audience:
+          allOf:
+          - $ref: '#/components/schemas/AudienceEnum'
+          title: Аудиторія
+        sizes:
+          type: array
+          items:
+            type: integer
+        stock:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Залишок
+        sku:
+          type: string
+          nullable: true
+          title: Артикул
+          description: Унікальний код товару, напр. HD-OVR-001
+          maxLength: 20
+        is_active:
+          type: boolean
+        is_featured:
+          type: boolean
+          title: Пропонований?
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedReviewWrite:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        product:
+          type: integer
+        rating:
+          allOf:
+          - $ref: '#/components/schemas/RatingEnum'
+          minimum: 0
+          maximum: 2147483647
+        text:
+          type: string
+          maxLength: 1000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedUser:
+      type: object
+      description: GET/PATCH /users/me/ — дані User + поля Profile (phone, address).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        email:
+          title: Email address
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        phone:
+          type: string
+          maxLength: 20
+        address:
+          type: string
+          maxLength: 255
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+        is_superuser:
+          type: boolean
+          readOnly: true
+          title: Superuser status
+          description: Designates that this user has all permissions without explicitly
+            assigning them.
+        groups:
+          type: array
+          items:
+            type: string
+          readOnly: true
+    ProductMini:
+      type: object
+      description: Мінімум даних про товар усередині відгуку — щоб фронтенд міг дати
+        посилання.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - name
+      - slug
+    ProductRead:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        category:
+          allOf:
+          - $ref: '#/components/schemas/Category'
+          readOnly: true
+        brand:
+          allOf:
+          - $ref: '#/components/schemas/Brand'
+          readOnly: true
+        audience:
+          allOf:
+          - $ref: '#/components/schemas/AudienceEnum'
+          title: Аудиторія
+        sizes:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        stock:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Залишок
+        sku:
+          type: string
+          nullable: true
+          title: Артикул
+          description: Унікальний код товару, напр. HD-OVR-001
+          maxLength: 20
+        is_active:
+          type: boolean
+        is_featured:
+          type: boolean
+          title: Пропонований?
+        avg_rating:
+          type: string
+          readOnly: true
+        reviews_count:
+          type: string
+          readOnly: true
+        is_favourite:
+          type: boolean
+          readOnly: true
+          default: false
+        in_stock:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - avg_rating
+      - brand
+      - category
+      - created_at
+      - id
+      - in_stock
+      - is_favourite
+      - name
+      - price
+      - reviews_count
+      - sizes
+      - slug
+      - updated_at
+    ProductWrite:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        category:
+          type: integer
+        brand:
+          type: integer
+        audience:
+          allOf:
+          - $ref: '#/components/schemas/AudienceEnum'
+          title: Аудиторія
+        sizes:
+          type: array
+          items:
+            type: integer
+        stock:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Залишок
+        sku:
+          type: string
+          nullable: true
+          title: Артикул
+          description: Унікальний код товару, напр. HD-OVR-001
+          maxLength: 20
+        is_active:
+          type: boolean
+        is_featured:
+          type: boolean
+          title: Пропонований?
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - brand
+      - category
+      - created_at
+      - id
+      - name
+      - price
+      - updated_at
+    RatingEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      type: integer
+      description: |-
+        * `1` - 1
+        * `2` - 2
+        * `3` - 3
+        * `4` - 4
+        * `5` - 5
+    Register:
+      type: object
+      description: Аналог RegisterForm(UserCreationForm) з apps.accounts.forms, але
+        для API.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        password:
+          type: string
+          writeOnly: true
+        password2:
+          type: string
+          writeOnly: true
+      required:
+      - id
+      - password
+      - password2
+      - username
+    ReviewRead:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: string
+          readOnly: true
+        product:
+          allOf:
+          - $ref: '#/components/schemas/ProductMini'
+          readOnly: true
+        rating:
+          allOf:
+          - $ref: '#/components/schemas/RatingEnum'
+          minimum: 0
+          maximum: 2147483647
+        text:
+          type: string
+          maxLength: 1000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - product
+      - user
+    ReviewWrite:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        product:
+          type: integer
+        rating:
+          allOf:
+          - $ref: '#/components/schemas/RatingEnum'
+          minimum: 0
+          maximum: 2147483647
+        text:
+          type: string
+          maxLength: 1000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - product
+    Size:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 10
+      required:
+      - id
+      - name
+    TokenObtainPair:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - password
+      - refresh
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          writeOnly: true
+      required:
+      - access
+      - refresh
+    User:
+      type: object
+      description: GET/PATCH /users/me/ — дані User + поля Profile (phone, address).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        email:
+          title: Email address
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        phone:
+          type: string
+          maxLength: 20
+        address:
+          type: string
+          maxLength: 255
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+        is_superuser:
+          type: boolean
+          readOnly: true
+          title: Superuser status
+          description: Designates that this user has all permissions without explicitly
+            assigning them.
+        groups:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - date_joined
+      - groups
+      - id
+      - is_staff
+      - is_superuser
+      - username
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

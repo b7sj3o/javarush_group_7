@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static shop_tags %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<main class="page-product">
+    <div class="container">
+        <section class="product-details-section">
+            <div class="product-image-container">
+                {% include "partials/product_image.html" with product=product css_class="product-image" %}
+            </div>
+
+            <div class="product-info-column">
+                <div class="product-title-price">
+                    <h1 class="product-name">{{ product.name }}</h1>
+                    <div class="price-section">
+                        <span class="price-tag">{{ product.category.name }}</span>
+                        <p class="product-price">{{ product.price|money }}</p>
+                    </div>
+                </div>
+
+                <div class="product-description">
+                    {{ product.description|linebreaks }}
+                </div>
+
+                <div class="cart-controls">
+                    {% if product.in_stock %}
+                        <form method="post" action="{% url 'orders:cart_add' product.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="quantity" value="1">
+                            <button type="submit" class="button button--primary add-to-cart-button" id="add-to-cart-btn">
+                                <i class="fa-solid fa-cart-shopping"></i>
+                                <span>Додати в кошик</span>
+                            </button>
+                        </form>
+                    {% else %}
+                        <button type="button" class="button button--primary add-to-cart-button" disabled>Немає в наявності</button>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section class="accordion-section">
+            <div class="accordion-item">
+                <div class="accordion-title">
+                    <h3>Характеристики</h3>
+                    <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                </div>
+                <div class="accordion-content">
+                    <ul>
+                        <li><strong>Категорія:</strong> {{ product.category.name }}</li>
+                        <li><strong>На складі:</strong> {{ product.stock }} шт.</li>
+                        <li><strong>Рейтинг:</strong> {{ product.rating_avg|floatformat:1 }} / 5 (відгуків: {{ product.rating_count }})</li>
+                        <li><strong>Артикул:</strong> {{ product.slug }}</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="reviews-section">
+            <h2 class="reviews-title">Останні відгуки</h2>
+
+            {% if reviews %}
+                <div class="reviews-grid">
+                    {% for review in reviews %}
+                        {% cycle 'img/avatars/avatar1.svg' 'img/avatars/avatar2.svg' 'img/avatars/avatar3.svg' 'img/avatars/avatar4.svg' 'img/avatars/avatar5.svg' as avatar silent %}
+                        <div class="review-card">
+                            <div class="review-rating">
+                                {% for star in "12345" %}
+                                    {% if forloop.counter <= review.rating %}
+                                        <i class="fa-solid fa-star"></i>
+                                    {% else %}
+                                        <i class="fa-regular fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="review-body">
+                                <h4 class="review-heading">{{ review.rating|rating_label }}</h4>
+                                <p class="review-text">{{ review.comment|default:"Без коментаря." }}</p>
+                            </div>
+                            <div class="review-author">
+                                <img src="{% static avatar %}" alt="Аватар" class="author-avatar">
+                                <span class="author-name">{{ review.user.get_full_name|default:review.user.username }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="review-text">Відгуків поки немає.</p>
+            {% endif %}
+
+            {% if can_review %}
+                <form method="post" action="{% url 'reviews:create' product.slug %}" class="review-form">
+                    {% csrf_token %}
+                    <div class="review-form__field">
+                        <span class="review-form__label">Ваша оцінка</span>
+                        <div class="review-form__rating">
+                            {% for radio in review_form.rating %}
+                                <label class="review-form__rating-option">{{ radio.tag }} {{ radio.choice_label }}</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="review-form__field">
+                        <label for="{{ review_form.comment.id_for_label }}">Коментар</label>
+                        <textarea id="{{ review_form.comment.id_for_label }}" name="{{ review_form.comment.html_name }}" class="Textarea" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="button button--primary">Надіслати відгук</button>
+                </form>
+{% endif %}
+        </section>
+    </div>
+</main>
+{% endblock %}

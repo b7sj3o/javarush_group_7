@@ -1,0 +1,19 @@
+# environments, IDE and tool caches
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# secrets — never publish
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.session
