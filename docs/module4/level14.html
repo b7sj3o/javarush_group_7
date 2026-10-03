@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 14: Паралельна обробка завдань, черги та масштабування</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 14: Паралельна обробка завдань, черги та масштабування</h1>
+        <p>Асинхронність (concurrency) дозволяє ефективно керувати безліччю задач, але не прискорює CPU-інтенсивні операції. Для досягнення справжньої <b>паралельної обробки</b> та масштабування ми поглибимо наше розуміння <b>Celery</b>.</p>
+        <p>Ви розберете ключові відмінності між асинхронністю та паралельністю і дізнаєтеся, як Celery дозволяє задіяти кілька ядер CPU через пул воркерів. Ми навчимося тонко налаштовувати кількість паралельних процесів, створювати кілька черг з маршрутизацією для ізоляції різних типів задач та використовувати параметр <code>prefetch_limit</code> для ефективного балансування навантаження.</p>
+        <p>Особливу увагу приділимо якості обслуговування (QoS) та підтвердженням для забезпечення надійної доставки задач, а також пріоритетам та TTL повідомлень, що є критично важливим для ефективного керування розподіленими системами.</p>
+        <hr>
+        <h2>Асинхронність vs Паралельність</h2>
+        <p>Ці терміни часто плутають, але вони мають різне значення.</p>
+        <p><b>Асинхронність (Concurrency):</b></p>
+        <ul>
+            <li>дозволяє керувати <i>багатьма</i> завданнями в <i>одному</i> потоці/процесі.</li>
+            <li>завдання перемикаються, коли одне з них "чекає" на операцію введення-виведення (I/O) (запит до мережі, читання з диска).</li>
+            <li><b>не прискорює</b> завдання, що навантажують CPU (CPU-bound), наприклад, складні обчислення.</li>
+            <li><b>ідеально для:</b> FastAPI-ендпоінтів, які роблять багато мережевих запитів.</li>
+            <li><b>ключові слова:</b> <code>async</code>, <code>await</code>.</li>
+        </ul>
+        <p><b>Паралельність (Parallelism):</b></p>
+        <ul>
+            <li>завдання виконуються <i>фізично одночасно</i> в різних потоках (threads) або процесах (processes).</li>
+            <li><b>прискорює</b> CPU-bound завдання, оскільки задіює декілька ядер процесора.</li>
+            <li><b>ідеально для:</b> обробки зображень, відео, складних математичних розрахунків.</li>
+            <li><b>інструменти:</b> <code>multiprocessing</code>, <code>concurrent.futures</code>, <b>Celery workers</b>.</li>
+        </ul>
+        <p><b>Celery</b> дозволяє досягти справжньої паралельності завдяки запуску завдань в окремих процесах-воркерах.</p>
+        <img data-max-width="1024" data-id="bdcb448e-af38-4e9e-b4b3-3f8a3c53e82b" src="https://cdn.javarush.com/images/article/bdcb448e-af38-4e9e-b4b3-3f8a3c53e82b/1024.jpeg" alt="">
+        <hr>
+        <h2>Налаштування для паралельної обробки</h2>
+        <p>Celery за замовчуванням вже працює паралельно та запускає завдання в пулі дочірніх процесів. Ви можете керувати кількістю цих процесів за допомогою прапорця <code>--concurrency</code>.</p>
+        <p><b>Запуск воркера з 4 паралельними процесами:</b></p>
+        <pre><code class="language-bash"># -c або --concurrency — кількість дочірніх процесів
+celery -A my_project worker --loglevel=info --concurrency=4
+</code></pre>
+        <p>Це означає, що один воркер зможе одночасно виконувати 4 завдання (якщо у вас достатньо ядер CPU). Для масштабування ви можете запускати декілька таких воркерів на одному або кількох серверах.</p>
+        <p><b>Архітектура масштабування</b></p>
+        <div class="mermaid">
+            graph TD
+            subgraph Сервер 1
+            W1[Воркер Celery<br/>--concurrency=4]
+            end
+            subgraph Сервер 2
+            W2[Воркер Celery<br/>--concurrency=4]
+            end
+            subgraph Сервер 3
+            W3[Воркер Celery<br/>--concurrency=4]
+            end
+
+            B((Брокер<br/>RabbitMQ / Redis)) --> W1;
+            B --> W2;
+            B --> W3;
+            P["Продюсер (FastAPI / Django)"] --> B;
+        </div>
+        <p>Продюсер надсилає завдання до брокера, а три воркери (що обробляють сумарно до 12 завдань одночасно) розбирають їх зі спільної черги.</p>
+        <hr>
+        <h2>Декілька черг та маршрутизація завдань</h2>
+        <p>Проблема: якщо у вас є і швидкі (надсилання push-сповіщення), і повільні (генерація звіту) завдання в одній черзі, повільні завдання можуть "заблокувати" швидкі.</p>
+        <p><b>Рішення:</b> створити різні черги для різних типів завдань і налаштувати <b>маршрутизацію</b>.</p>
+        <p><b>Налаштування маршрутів у Celery (<code>celery_app.py</code>):</b></p>
+        <pre class="language-python"><code># celery_app.py
+celery_app.conf.task_routes = {
+    # Завдання з модуля 'tasks.notifications' надсилати до черги 'notifications'
+    'tasks.notifications.*': {'queue': 'notifications'},
+    # Завдання з модуля 'tasks.reports' надсилати до черги 'reports'
+    'tasks.reports.*': {'queue': 'reports'},
+    # Всі інші завдання — до черги за замовчуванням ('celery')
+    '#': {'queue': 'default'},
+}
+</code></pre>
+        <p><b>Запуск воркерів для конкретних черг:</b></p>
+        <pre><code class="language-bash"># Воркер для швидких завдань
+celery -A my_project worker -l info -Q notifications -c 4
+
+# Воркер для повільних завдань (можна запустити на окремому, більш потужному сервері)
+celery -A my_project worker -l info -Q reports -c 2
+</code></pre>
+        <p>Це дозволяє ізолювати завдання одне від одного та гнучко масштабувати обробку різних типів завдань.</p>
+        <hr>
+        <h2>Балансування навантаження та Prefetch Limit</h2>
+        <p>
+            <b>Балансування навантаження.</b> За замовчуванням RabbitMQ розподіляє завдання між усіма консюмерами, що слухають одну чергу, за принципом <b>Round-Robin</b> (по колу). Кожному воркеру дістається приблизно однакова кількість завдань.
+        </p>
+        <img data-max-width="800" data-id="0d8241e6-eecc-48c0-afde-35ac93b483a6" src="https://cdn.javarush.com/images/article/0d8241e6-eecc-48c0-afde-35ac93b483a6/800.jpeg" alt="">
+        <p>
+            Однак продуктивність усієї системи сильно залежить від налаштування <b>Prefetch Limit</b>. Це налаштування визначає, скільки "непідтверджених" повідомлень воркер може взяти з черги та тримати у своєму внутрішньому буфері. Неправильне налаштування може призвести до двох різних проблем.
+        </p>
+        <h4>Сценарій 1: Довготривалі завдання та проблема "жадібного воркера"</h4>
+        <p>
+            Уявіть, що у вас є декілька воркерів і завдання, виконання яких займає багато часу (наприклад, обробка відео).
+        </p>
+        <ul>
+            <li><strong>Проблема:</strong> за замовчуванням воркер Celery може заздалегідь "зарезервувати" для себе декілька завдань (наприклад, 4). Якщо перша з них виявиться дуже довгою (10 хвилин), то інші три завдання простоюватимуть у буфері цього "жадібного" воркера, хоча інші воркери в цей час можуть бути вільними. Це знижує паралелізм та загальну продуктивність.</li>
+            <li><strong>Рішення:</strong> для довготривалих та різнорідних за часом виконання завдань встановіть <code>prefetch_limit = 1</code>. Це гарантує, що воркер не візьме нове завдання, поки повністю не обробить поточну. Як тільки завдання виконається, наступне завдання з черги буде віддане першому ж <strong>вільному</strong> воркеру, забезпечуючи максимально справедливий розподіл навантаження.</li>
+        </ul>
+        <pre class="language-python"><code># settings.py або celery_app.conf для довготривалих завдань
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1</code></pre>
+        <div class="mermaid">
+            graph LR
+            subgraph "Довготривалі завдання"
+            direction LR
+            Q1((Черга))
+            subgraph "prefetch_limit > 1 (Погано)"
+            W1["Воркер А (зайнятий 10 хв)"] -- взяв --> T1[Завдання 1]
+            W1 -- заблокував --> T2[Завдання 2]
+            W1 -- заблокував --> T3[Завдання 3]
+            W2["Воркер Б (простоює)"]
+            end
+            subgraph "prefetch_limit = 1 (Добре)"
+            W3["Воркер А"] -- взяв --> T4[Завдання 1]
+            W4["Воркер Б"] -- взяв --> T5[Завдання 2]
+            end
+            Q1 --> W1
+            Q1 --> W2
+            Q1 --> W3
+            Q1 --> W4
+            end
+        </div>
+
+        <h4>Сценарій 2: Короткі завдання та проблема мережевої затримки</h4>
+        <p>
+            Тепер уявіть протилежну ситуацію: ваші завдання виконуються дуже швидко (5 мс), але мережева затримка до RabbitMQ значна (60 мс).
+        </p>
+        <ul>
+            <li><strong>Проблема:</strong> якщо <code>prefetch_limit = 1</code>, то воркер витрачатиме більшу частину часу на очікування мережі (<code>60мс на отримання + 60мс на підтвердження</code>), а корисною роботою буде зайнятий лише 5 мс. Пропускна здатність буде вкрай низькою.</li>
+            <li><strong>Рішення:</strong> для швидких завдань встановіть <code>prefetch_limit > 1</code> (наприклад, 10 або 100). Це дозволить воркеру заповнити внутрішній буфер повідомленнями та обробляти їх одне за одним, майже без відволікання на очікування мережі. Поки логіка обробляє одне повідомлення, на фоні вже підвантажуються наступні.</li>
+        </ul>
+        <div class="mermaid">
+            graph LR
+            subgraph "Короткі завдання"
+            direction LR
+            Q2((Черга))
+            subgraph "prefetch_limit = 1 (Погано)"
+            W5[Воркер] --> N1("Чекаємо на мережу 60мс");
+            N1 --> P1("Обробка 5мс");
+            P1 --> N2("Чекаємо на мережу 60мс");
+            end
+            subgraph "prefetch_limit > 1 (Добре)"
+            W6[Воркер] -- заповнив --> B[Буфер];
+            B --> P2("Обробка 5мс");
+            P2 --> P3("Обробка 5мс");
+            P3 --> P4("...");
+            end
+            Q2 --> W5;
+            Q2 --> W6;
+            end
+        </div>
+
+        <p>Завжди аналізуйте характер ваших завдань, перш ніж змінювати це налаштування.</p>
+        <hr>
+        <h2>Якість обслуговування (QoS) та підтвердження</h2>
+        <p>Щоб гарантувати, що завдання не губляться під час збоїв, використовуються <b>підтвердження (acknowledgements)</b>.</p>
+
+        <p><b><code>task_acks_late = True</code>:</b></p>
+        <ul>
+            <li>це налаштування говорить воркеру надсилати підтвердження (<code>ack</code>) брокеру <b>лише після</b> того, як завдання успішно виконане.</li>
+            <li>якщо воркер "впаде" під час виконання завдання, брокер не отримає <code>ack</code>, зрозуміє, що завдання не виконано, і передасть його іншому вільному воркеру.</li>
+            <li><b>важливо:</b> це захищає від втрати завдань, але вимагає, щоб ваші завдання були <b>ідемпотентними</b> (повторне виконання завдання не призводить до помилки або дублювання даних).</li>
+        </ul>
+        <p><b><code>task_reject_on_worker_lost = True</code>:</b></p>
+        <ul>
+            <li>додаткове налаштування, яке вказує брокеру повернути завдання до черги, якщо з'єднання з воркером було втрачено.</li>
+        </ul>
+        <hr>
+        <h2>Пріоритети та TTL для повідомлень</h2>
+        <p><b>Пріоритети:</b></p>
+        <ul>
+            <li>RabbitMQ підтримує пріоритети для черг. Ви можете вказати, що одні завдання є важливішими за інші.</li>
+            <li>спочатку потрібно оголосити чергу з підтримкою пріоритетів.</li>
+            <li>потім під час надсилання завдання можна вказати його пріоритет.</li>
+        </ul>
+        <pre class="language-python"><code># Надсилаємо завдання з найвищим пріоритетом (від 0 до 255 для RabbitMQ)
+send_critical_alert.apply_async(args=[...], priority=10)
+</code></pre>
+        <p><b>TTL (Time-To-Live):</b></p>
+        <ul>
+            <li>ви можете встановити "термін придатності" для повідомлень у черзі.</li>
+            <li>якщо повідомлення не було оброблене за вказаний час, воно буде видалене або (якщо налаштовано) надіслане до спеціальної "мертвої" черги (Dead Letter Exchange).</li>
+            <li>корисно для завдань, які втрачають актуальність (наприклад, надсилання промо-коду, що діє 1 годину).</li>
+        </ul>
+        <hr>
+        <h2>Моніторинг: Flower, RabbitMQ Management, Prometheus</h2>
+        <p>Ви не можете керувати тим, що не вимірюєте. Моніторинг черг та воркерів є критично важливим.</p>
+        <p><b>Flower:</b></p>
+        <ul>
+            <li>вебінтерфейс для моніторингу Celery.</li>
+            <li>показує статуси завдань, навантаження на воркери, дозволяє керувати завданнями.</li>
+            <li>запуск: <code>celery -A my_project flower</code></li>
+        </ul>
+        <p><b>RabbitMQ Management Plugin:</b></p>
+        <ul>
+            <li>вебінтерфейс самого RabbitMQ (<code>http://localhost:15672</code>).</li>
+            <li>показує стан черг (кількість повідомлень, швидкість обробки), обмінників, з'єднань.</li>
+        </ul>
+        <p><b>Prometheus + Grafana:</b></p>
+        <ul>
+            <li>промисловий стандарт для збору метрик та візуалізації.</li>
+            <li>RabbitMQ та Celery можуть експортувати метрики в Prometheus, а Grafana дозволяє будувати на їх основі дашборди для відстеження продуктивності системи в динаміці.</li>
+        </ul>
+        <hr>
+        <h2>Як уникнути блокувань та затримок</h2>
+        <ul>
+            <li><b>розділяйте черги:</b> найважливіший принцип. Швидкі завдання (надсилання push-сповіщень) не повинні чекати в одній черзі з повільними (обробка відео).</li>
+            <li><b>налаштуйте prefetch:</b> встановіть <code>CELERY_WORKER_PREFETCH_MULTIPLIER = 1</code> для довготривалих завдань, щоб забезпечити рівномірний розподіл.</li>
+            <li><b>використовуйте Dead Letter Exchange (DLX):</b> налаштуйте RabbitMQ так, щоб "проблемні" завдання (які постійно викликають помилки) після кількох спроб переходили до окремої черги для аналізу, а не блокували основну.</li>
+            <li><b>увімкніть <code>acks_late=True</code>:</b> щоб не втрачати завдання під час збоїв воркерів.</li>
+            <li><b>масштабуйте воркерів:</b> якщо бачите, що черга постійно зростає, додайте більше процесів-воркерів (<code>--concurrency</code>) або більше серверів з воркерами.</li>
+        </ul>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+  <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+  <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+  <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+  <title>Рівень 1. Архітектурні патерни</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+  <db-content>
+    <h1>Рівень 1. Архітектурні патерни</h1>
+    <p>Ласкаво просимо до Модуля 5 "Architecture & Logic". Ви вже пройшли великий шлях: від синтаксису Python до створення складних асинхронних API та роботи з Docker. Тепер настає переломний момент. До цього ви вчилися писати код, який <b>працює</b>. Тепер ми будемо вчитися писати код, який <b>живе довго</b>.</p>
+    <p>Ми розберемо, як проєктувати додатки так, щоб їх можна було підтримувати та масштабувати. Ми вивчимо класичні патерни проєктування, але — і це критично важливо — ми подивимося на них крізь призму <b>Python</b>. Ви дізнаєтеся, чому деякі рішення з підручників по Java виглядають у Python зайвими, і навчитеся писати ідіоматичний, чистий код.</p>
+    <img data-max-width="800" data-id="a7c4b40d-e33f-4265-ab4d-3c3b51aac34e" src="https://cdn.javarush.com/images/article/a7c4b40d-e33f-4265-ab4d-3c3b51aac34e/800.jpeg" alt="">
+    <hr>
+    <h2>Що таке патерни проєктування</h2>
+    <p>У програмуванні, як і в будівництві, є типові проблеми. Як створити об'єкт, якщо ми не знаємо його тип заздалегідь? Як подружити два класи, які розмовляють різними мовами?</p>
+    <p><b>Design Pattern</b> — це перевірене часом, стандартне рішення поширеної архітектурної задачі. Це не готовий код, який можна скопіювати, а скоріше шаблон або схема вирішення проблеми.</p>
+    <p>Навіщо вивчати патерни, якщо задачу можна вирішити інтуїтивно?</p>
+    <ol>
+      <li>Патерни формують мову спілкування всередині команди. Фраза <i>"Використовуй тут Стратегію"</i> замінює години пояснень структури класів.</li>
+      <li>Це квінтесенція досвіду індустрії. Використання патернів захищає від винайдення велосипедів та типових архітектурних помилок.</li>
+      <li>Знання патернів допомагає бачити структуру програми цілком, абстрагуючись від деталей реалізації.</li>
+    </ol>
+    <hr>
+    <h2>Історичний контекст: Звідки вони взялися?</h2>
+    <p>Фундаментальна праця в цій галузі — книга "Design Patterns", що вийшла у 1994 році. Її авторів називають <b>"Band of Four" (GoF)</b> — Банда Чотирьох.</p>
+    <p><b>Важливо розуміти контекст:</b>
+      Книга була написана на основі досвіду <b>C++ та Smalltalk</b>.</p>
+    <ul>
+      <li>У C++ тих років не було автоматичного управління пам'яттю.</li>
+      <li>Не було модулів (як у Python).</li>
+      <li>Була жорстка статична типізація.</li>
+    </ul>
+    <p>Багато патернів (наприклад, Singleton або Factory) у книзі GoF вирішують проблеми, яких у сучасному Python <b>просто не існує</b> або вони вирішуються засобами самої мови.</p>
+    <p>Рекомендуємо відвідати - <a href="https://refactoring.guru/">https://refactoring.guru/</a></p>
+    <hr>
+    <h2>"Карго-культ" у Python</h2>
+    <p>Поширена помилка при переході до архітектури — сліпе копіювання патернів із Java або C++ у Python. Це призводить до надмірного ускладнення.</p>
+    <p>Простий скрипт не повинен перетворюватися на ієрархію з десяти класів та п'яти інтерфейсів тільки заради відповідності "книжковому" визначенню патерна. Код на Python повинен залишатися читабельним та лаконічним.</p>
+    <p><b>Наш підхід до вивчення:</b></p>
+    <ol>
+      <li><b>Academic/Classic:</b> як патерн описується в теорії (важливо для розуміння суті та проходження співбесід).</li>
+      <li><b>The Pythonic Way:</b> як цей патерн реалізується в ідіоматичному Python, використовуючи можливості мови.</li>
+    </ol>
+    <hr>
+    <h2>UML для розробника</h2>
+    <p>Патерни — це про зв'язки між об'єктами. Щоб не малювати код на дошці, використовують <b>UML (Unified Modeling Language)</b>. Вам не потрібно знати його ідеально, достатньо розуміти основні стрілки.</p>
+    <h4>Основні типи відносин</h4>
+    <div class="mermaid">classDiagram
+      class Car {
+      +Engine engine
+      +start()
+      }
+      class Engine {
+      +work()
+      }
+      class Driver {
+      +drive()
+      }
+      class Wheel {
+      +rotate()
+      }
+
+      Car *-- Engine : Композиція (Composition) Частина вмирає без Цілого
+      Car o-- Wheel : Агрегація (Aggregation) Частина може жити окремо
+      Driver ..> Car : Залежність (Dependency) Driver використовує Car</div>
+    <ul>
+      <li><b>Композиція:</b> жорсткий зв'язок. Двигун — частина Машини. Немає машини — немає двигуна.</li>
+      <li><b>Агрегація:</b> м'який зв'язок. Колесо — частина Машини, але його можна зняти та покласти в гараж.</li>
+      <li><b>Залежність:</b> один об'єкт тимчасово використовує інший (наприклад, у параметрах методу).</li>
+    </ul>
+    <hr>
+    <h2>Група 1: Породжувальні патерни (Creational)</h2>
+    <p>Ця група патернів відповідає за <b>створення об'єктів</b>.
+      Здавалося б, що може бути простішим за виклик <code>MyClass()</code>?</p>
+    <p>Але проблеми виникають, коли:</p>
+    <ul>
+      <li>Ми не знаємо заздалегідь, який клас нам знадобиться.</li>
+      <li>Нам потрібно гарантувати, що об'єкт лише один.</li>
+      <li>Ініціалізація об'єкта занадто складна і вимагає безлічі кроків.</li>
+    </ul>
+    <hr>
+    <h2>Singleton (Одинак)</h2>
+    <p>Гарантує, що у класу є тільки один екземпляр, і надає до нього глобальну точку доступу.</p>
+    <div class="mermaid">classDiagram
+      class Singleton {
+      -static instance
+      -Singleton()
+      +static getInstance()
+      }</div>
+    <h4>Academic Approach</h4>
+    <p>Використання методу <code>__new__</code> для контролю створення об'єкта.</p>
+    <pre class="language-python"><code>class Singleton:
+    _instance = None
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+# s1 і s2 - це один і той самий об'єкт
+s1 = Singleton()
+s2 = Singleton() </code></pre>
+    <h4>The Pythonic Way (Як робимо ми)</h4>
+    <p>У Python <b>модуль — це вже Singleton</b>. Він імпортується один раз, і всі наступні імпорти повертають посилання на той самий об'єкт модуля.</p>
+    <pre class="language-python"><code># db_config.py
+print("Connecting to DB...")
+connection = DatabaseConnection(url="...")
+
+# main.py
+from db_config import connection
+# Просто використовуємо об'єкт connection. Він гарантовано один.</code></pre>
+    <hr>
+    <h2>Builder (Будівельник)</h2>
+    <p>Відокремлює конструювання складного об'єкта від його представлення. Дозволяє створювати об'єкт покроково.</p>
+    <div class="mermaid">graph LR
+      Client --> Builder
+      Builder -- 1. setPartA --> Object
+      Builder -- 2. setPartB --> Object
+      Builder -- 3. getResult --> Client</div>
+    <h4>Коли це Overengineering?</h4>
+    <p>Якщо ви робите Builder просто, щоб уникнути довгого конструктора:</p>
+    <pre class="language-python"><code># Погано в Python (Java-style)
+car = CarBuilder().set_color("Red").set_engine("V8").build()</code></pre>
+    <h4>The Pythonic Way</h4>
+    <p>Використовуйте <b>іменовані аргументи</b> в <code>__init__</code>.</p>
+    <pre class="language-python"><code># Добре
+car = Car(color="Red", engine="V8", wheels=4)</code></pre>
+    <h4>Коли Builder реально потрібен?</h4>
+    <p>Коли створення об'єкта вимагає складної логіки, різних етапів або перетворень даних (наприклад, <b>ORM</b> або побудова <b>звітів</b>).</p>
+    <pre class="language-python"><code># SQLAlchemy Query Builder - чудовий приклад
+query = session.query(User).filter(User.age > 18).order_by(User.name)
+# Ми "будуємо" SQL-запит по кроках</code></pre>
+    <hr>
+    <h2>Factory Method (Фабричний метод)</h2>
+    <p>Визначає інтерфейс для створення об'єкта, але залишає підкласам рішення про те, який клас інстанціювати.</p>
+    <div class="mermaid">classDiagram
+      class Creator {
+      +createProduct()
+      }
+      class ConcreteCreatorA
+      class ConcreteCreatorB
+      Creator <|-- ConcreteCreatorA
+      Creator <|-- ConcreteCreatorB
+      ConcreteCreatorA ..> ProductA : Creates
+      ConcreteCreatorB ..> ProductB : Creates</div>
+    <h4>Проблема</h4>
+    <p>Вам потрібно парсити дані, але формат (JSON, XML, YAML) стає відомим тільки в момент отримання файлу.</p>
+    <h4>The Pythonic Way</h4>
+    <p>Замість створення складної ієрархії класів <code>Creator</code> та <code>ConcreteCreator</code>, у Python часто використовують <b>словник диспетчеризації</b> або функції-фабрики.</p>
+    <pre class="language-python"><code>def get_parser(format_type: str):
+    parsers = {
+        'json': JsonParser,
+        'xml': XmlParser,
+        'yaml': YamlParser
+    }
+    # Повертаємо клас або функцію, не створюючи об'єкт одразу
+    return parsers.get(format_type, DefaultParser)()
+
+# Використання
+parser = get_parser('json')
+parser.parse(data)</code></pre>
+    <hr>
+    <h2>Abstract Factory (Абстрактна фабрика)</h2>
+    <p>Дозволяє створювати <b>сімейства</b> пов'язаних об'єктів (без прив'язки до конкретних класів). Це "Фабрика фабрик".</p>
+    <div class="mermaid">classDiagram
+      class GUIFactory {
+      +createButton()
+      +createWindow()
+      }
+      class WinFactory
+      class MacFactory
+
+      GUIFactory <|-- WinFactory
+      GUIFactory <|-- MacFactory
+
+      WinFactory ..> WinButton : Creates
+      WinFactory ..> WinWindow : Creates</div>
+    <h4>Приклад із життя</h4>
+    <p>Уявіть, що ви пишете UI-бібліотеку, яка повинна працювати і на Windows, і на macOS.</p>
+    <ul>
+      <li>Якщо ОС Windows -> потрібні кнопки <code>WinButton</code> та вікна <code>WinWindow</code>.</li>
+      <li>Якщо ОС macOS -> потрібні <code>MacButton</code> та <code>MacWindow</code>.</li>
+      <li>Не можна змішувати <code>WinButton</code> з <code>MacWindow</code>.</li>
+    </ul>
+    <p>Абстрактна фабрика гарантує, що всі створювані об'єкти належатимуть до однієї "теми" або "платформи". У веб-розробці зустрічається рідше, наприклад, при виборі драйвера бази даних (PostgresFactory vs MySQLFactory), що створює сумісні з'єднання та курсори.</p>
+    <hr>
+    <h2>Prototype (Прототип)</h2>
+    <p>Створення нових об'єктів шляхом клонування вже існуючих (прототипів).</p>
+    <div class="mermaid">graph LR
+      Default[Default Config] -- "1. copy.deepcopy()" --> UserConf[User Config]
+      UserConf -- "2. Change Settings" --> UserConfMod["User Config (Theme: Dark)"]
+
+      Default -. "Remains Unchanged" .-> Default
+      style UserConf stroke-dasharray: 5 5</div>
+    <p><b>Навіщо?</b> Створення об'єкта з нуля може бути дорогим (запити в БД, складні обчислення), а копія робиться швидко.</p>
+    <h4>Python Implementation</h4>
+    <p>У Python цей патерн реалізований у стандартній бібліотеці <code>copy</code>.</p>
+    <pre class="language-python"><code>import copy
+
+class Config:
+    def __init__(self):
+        self.settings = self._load_heavy_settings_from_db() # Довго!
+
+# Створюємо один раз
+default_config = Config()
+
+# Клонуємо для кожного користувача
+user_config = copy.deepcopy(default_config)
+user_config.settings['theme'] = 'dark'</code></pre>
+    <hr>
+    <h2>Група 2: Структурні патерни (Structural)</h2>
+    <p>Ми створили об'єкти. Тепер їх потрібно <b>зв'язати</b> в працюючу систему.
+      Структурні патерни відповідають за композицію класів та об'єктів.</p>
+    <p>Основні завдання:</p>
+    <ul>
+      <li>Поєднати несумісне (Adapter).</li>
+      <li>Спростити складне (Facade).</li>
+      <li>Додати функціонал без успадкування (Decorator).</li>
+    </ul>
+    <hr>
+    <h2>Adapter (Адаптер)</h2>
+    <p>Дозволяє об'єктам із несумісними інтерфейсами працювати разом. Діє як "перехідник".</p>
+    <div class="mermaid">classDiagram
+      class Client
+      class Adapter {
+      +request()
+      }
+      class OldSystem {
+      +specific_request()
+      }
+      Client --> Adapter : uses standard interface
+      Adapter --> OldSystem : calls specific method</div>
+    <h4>The Pythonic Way: Duck Typing</h4>
+    <p>У статичних мовах адаптер зобов'язаний реалізовувати конкретний Інтерфейс. У Python працює <b>Duck Typing</b>: <i>"Якщо це ходить як качка і крякає як качка, то це качка"</i>.</p>
+    <pre class="language-python"><code>class OldLogger:
+    def log_message(self, msg): ...
+
+class NewSystem:
+    def log(self, text): ...
+
+# Adapter
+class LoggerAdapter:
+    def __init__(self, old_logger):
+        self.old_logger = old_logger
+
+    def log(self, text):
+        # Адаптуємо виклик
+        self.old_logger.log_message(text)</code></pre>
+    <p>Нам не потрібно успадковувати LoggerAdapter від якогось базового класу, головне, щоб у нього був метод <code>log</code>.</p>
+    <hr>
+    <h2>Decorator (Декоратор)</h2>
+    <p>Не плутайте патерн проєктування "Декоратор" та синтаксис декораторів Python (<code>@wrapper</code>). Хоча вони вирішують схожі завдання.</p>
+    <div class="mermaid">graph LR
+      Client --> Wrapper[Decorator]
+      Wrapper -- "Extra Logic" --> RealObject</div>
+    <p><b>Суть патерна:</b> Динамічне додавання об'єкту нових обов'язків. Гнучка альтернатива успадкуванню.</p>
+    <h4>Візуалізація</h4>
+    <div class="mermaid">graph LR
+      Client --> Decorator
+      Decorator -- "дод. логіка" --> Component</div>
+    <h4>Приклад</h4>
+    <p>У вас є об'єкт <code>Response</code>. Ви хочете огорнути його в <code>GzipDecorator</code>, щоб стиснути дані, а потім у <code>LogDecorator</code>, щоб залогувати відправлення.
+      У Python це часто реалізується через <b>Middleware</b> (наприклад, у Django або FastAPI) або дійсно через синтаксис <code>@</code>.</p>
+    <hr>
+    <h2>Facade (Фасад)</h2>
+    <p>Надає простий інтерфейс до складної системи класів, бібліотеки або фреймворку.</p>
+    <div class="mermaid">classDiagram
+      class Client
+      class Facade {
+      +simple_operation()
+      }
+      class SubsystemA
+      class SubsystemB
+      class SubsystemC
+
+      Client --> Facade
+      Facade --> SubsystemA
+      Facade --> SubsystemB
+      Facade --> SubsystemC</div>
+    <h4>Проблема</h4>
+    <p>У вас є бібліотека для роботи з відео, де потрібно ініціалізувати <code>Codec</code>, <code>BitrateManager</code>, <code>AudioMixer</code>, <code>Buffer</code>...</p>
+    <h4>Рішення</h4>
+    <p>Ви створюєте один клас <code>VideoConverter</code> з одним методом <code>convert(file, format)</code>.</p>
+    <h4>Приклад із Python</h4>
+    <p>Бібліотека <b>requests</b> — це чудовий Фасад. Всередині неї складна робота з <code>urllib3</code>, сокетами, пулами з'єднань, кодуваннями. Але для вас це просто:</p>
+    <pre class="language-python"><code>requests.get('https://google.com')</code></pre>
+    <p>Ви не бачите складності, прихованої за фасадом.</p>
+    <hr>
+    <h2>Proxy (Замісник)</h2>
+    <p>Об'єкт, який контролює доступ до іншого об'єкта.</p>
+    <div class="mermaid">classDiagram
+      class Client
+      class Proxy {
+      +request()
+      }
+      class RealSubject {
+      +request()
+      }
+
+      Client --> Proxy
+      Proxy --> RealSubject : Forwards request if allowed/needed</div>
+    <p><b>Види Proxy:</b></p>
+    <ol>
+      <li><b>Lazy Proxy (Лінивий/Віртуальний):</b> створює важкий об'єкт тільки тоді, коли він реально потрібен.</li>
+      <li><b>Remote Proxy (Віддалений):</b> локальний представник об'єкта, який знаходиться на іншому сервері.</li>
+      <li><b>Protection Proxy (Захисний):</b> перевіряє права доступу при зверненні до об'єкта.</li>
+    </ol>
+    <h4>Приклад: Django Lazy Objects</h4>
+    <p>У Django, коли ви звертаєтеся до <code>request.user</code> всередині view, запит до бази даних не відбувається одразу. Django створює <b>Proxy-об'єкт</b>. Реальний SQL-запит виконається тільки тоді, коли ви спробуєте прочитати поле, наприклад <code>request.user.username</code>.</p>
+    <hr>
+    <h2>Bridge та Composite</h2>
+    <p>Два патерни, які варто розуміти концептуально.</p>
+    <h4>Bridge (Міст)</h4>
+    <p>Розділяє абстракцію та реалізацію так, щоб вони могли змінюватися незалежно.
+      <i>Приклад:</i> Абстракція "Геометрична Фігура" (Коло, Квадрат) відокремлена від Реалізації "Малювання" (на Екрані в Пікселях або на Принтері у Векторах).</p>
+    <div class="mermaid">classDiagram
+      class Shape {
+      +draw()
+      }
+      class DrawingAPI {
+      +draw_circle()
+      }
+
+      Shape o-- DrawingAPI : Bridge
+
+      class Circle
+      class Square
+      Shape <|-- Circle
+      Shape <|-- Square
+
+      class VectorAPI
+      class RasterAPI
+      DrawingAPI <|-- VectorAPI
+      DrawingAPI <|-- RasterAPI</div>
+    <p>Це дозволяє додати нову фігуру (Triangle) без зміни API малювання, і додати новий API (SVG) без зміни фігур.</p>
+    <h4>Composite (Компонувальник)</h4>
+    <p>Дозволяє згрупувати об'єкти в деревоподібну структуру і працювати з групою так само, як з одиничним об'єктом.
+      <i>Приклад:</i> Графічний інтерфейс. <code>Window</code> містить <code>Panel</code>, яка містить <code>Button</code> та <code>TextField</code>. Ви викликаєте <code>Window.draw()</code>, і воно рекурсивно викликає <code>draw()</code> у всіх дітей.</p>
+    <div class="mermaid">graph TD
+      Menu --> File
+      Menu --> Edit
+      File --> New
+      File --> Open
+      Edit --> Copy
+      Edit --> Paste</div>
+    <p>Клієнт викликає метод <code>draw()</code> у кореня (Menu), і команда рекурсивно проходить по всіх елементах дерева.</p>
+    <hr>
+    <h2>Підсумки</h2>
+    <p>Не намагайтеся запхати патерни скрізь, де це можливо. Це називається <b>Overengineering</b>.</p>
+    <ol>
+      <li>Спочатку пишіть простий, зрозумілий код.</li>
+      <li>Якщо відчуваєте біль (дублювання, складність модифікації) — подивіться, який патерн вирішує цю проблему.</li>
+      <li>Використовуйте можливості Python (модулі, декоратори, ітератори) перед тим, як будувати складні класові структури в стилі Java.</li>
+    </ol>
+    <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m5">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

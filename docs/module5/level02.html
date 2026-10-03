@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+  <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+  <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+  <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+  <title>Рівень 2. Поведінкові патерни та Антипатерни</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+  <db-content>
+    <h1>Рівень 2. Поведінкові патерни та Антипатерни</h1>
+    <p>На минулому занятті ми будували "скелет" додатка: створювали об'єкти та з'єднували їх. Сьогодні ми займемося "нервовою системою".</p>
+    <p><b>Поведінкові патерни (Behavioral Patterns)</b> відповідають за взаємодію між об'єктами. Хто кому передає дані? Хто відповідає за виконання завдання? Як розв'язати жорстку залежність між компонентами?</p>
+    <p>А в другій частині лекції ми розберемо <b>Антипатерни</b> — "архітектурні гріхи", які роблять майже всі новачки (і багато досвідчених розробників).</p>
+    <hr>
+    <h2>Iterator (Ітератор)</h2>
+    <p>Надає спосіб послідовно обходити елементи складної колекції, не розкриваючи її внутрішнього устрою.</p>
+    <h4>The Pythonic Way: Generators</h4>
+    <p>У Java або C++ для цього потрібно створювати клас, що реалізує інтерфейс <code>Iterator</code> з методами <code>next()</code> і <code>hasNext()</code>.
+      У Python <b>ітератори вбудовані в мову</b>.</p>
+    <p>Якщо вам потрібно ліниво перебирати дані, не пишіть класи. Пишіть <b>Генератори</b>.</p>
+    <pre class="language-python"><code># The Python Way: Generator
+def large_file_reader(file_path):
+    with open(file_path, 'r') as f:
+        for line in f:
+            if "ERROR" in line:
+                yield line  # Повертаємо значення і "заморожуємо" стан
+
+# Використання
+for error_line in large_file_reader("server.log"):
+    print(error_line)</code></pre>
+    <p>Це і є патерн Ітератор, реалізований на рівні синтаксису мови (<code>yield</code>).</p>
+    <hr>
+    <h2>Strategy (Стратегія)</h2>
+    <p>Визначає сімейство алгоритмів, інкапсулює їх і робить їх взаємозамінними.</p>
+    <h4>Проблема</h4>
+    <p>У вас є інтернет-магазин. Розрахунок вартості доставки залежить від оператора служби.
+      <b>Антипатерн:</b></p>
+    <pre class="language-python"><code>if service == 'fedex':
+    cost = weight * 1.5
+elif service == 'dhl':
+    cost = weight * 2.0
+# І так далі...</code></pre>
+    <div class="mermaid">graph LR
+      Context[Order] -- uses --> Strategy[Shipping Function]
+      Strategy -.-> FedEx
+      Strategy -.-> DHL</div>
+    <h4>The Pythonic Way: Functions as First-Class Citizens</h4>
+    <p>Нам не потрібні класи <code>FedExStrategy</code> і <code>DHLStrategy</code>. У Python функції — це об'єкти. Ми можемо передавати їх як аргументи.</p>
+    <pre class="language-python"><code>def calc_fedex(weight): return weight * 1.5
+def calc_dhl(weight): return weight * 2.0
+
+class Order:
+    def calculate_shipping(self, weight, strategy: callable):
+        return strategy(weight)
+
+# Використання
+order.calculate_shipping(10, calc_fedex)</code></pre>
+    <hr>
+    <h2>Command (Команда)</h2>
+    <p>Перетворює запит (виклик методу) на об'єкт. Це дозволяє передавати запити як аргументи, ставити їх у чергу, логувати або скасовувати.</p>
+    <h4>Зв'язок із вашим досвідом: Celery</h4>
+    <p>Ви вже використовували цей патерн, коли працювали з <b>Celery</b>.</p>
+    <p>Коли ви пишете <code>task.delay(arg1, arg2)</code>, Celery:</p>
+    <ol>
+      <li>Бере функцію та аргументи.</li>
+      <li>Серіалізує їх в об'єкт (JSON/Pickle).</li>
+      <li>Кладе в чергу (Broker).</li>
+      <li>Воркер дістає "Команду" і виконує її.</li>
+    </ol>
+    <div class="mermaid">sequenceDiagram
+      participant Client
+      participant Queue as Broker (Queue)
+      participant Worker as Invoker
+
+      Client->>Queue: task.delay(data) (Create Command)
+      Queue->>Worker: deliver task
+      Worker->>Worker: execute()</div>
+    <p>У Python патерн Command часто реалізується саме через черги завдань, а не через класи.</p>
+    <hr>
+    <h2>Template Method (Шаблонний метод)</h2>
+    <p>Визначає скелет алгоритму в базовому класі, але дозволяє спадкоємцям перевизначати окремі кроки, не змінюючи структуру алгоритму.</p>
+    <h4>Зв'язок із вашим досвідом: Django Class-Based Views</h4>
+    <p>Це ідеальний приклад. У <code>ListView</code> є метод <code>get()</code>, який викликає всередині себе ланцюжок:</p>
+    <ol>
+      <li><code>setup()</code></li>
+      <li><code>get_queryset()</code>  <-- Ви перевизначаєте це</li>
+      <li><code>get_context_data()</code> <-- І це</li>
+      <li><code>render_to_response()</code></li>
+    </ol>
+    <p>Вам не потрібно писати всю логіку обробки HTTP-запиту заново. Ви змінюєте тільки "вставні" частини шаблону.</p>
+    <div class="mermaid">classDiagram
+      class GenericView {
+      +dispatch()
+      +get_queryset()*
+      +get_context_data()*
+      }
+      class MyProductListView {
+      +get_queryset()
+      +get_context_data()
+      }
+      GenericView <|-- MyProductListView</div>
+    <hr>
+    <h2>Observer (Спостерігач)</h2>
+    <p>Визначає залежність "один-до-багатьох". Коли один об'єкт змінює стан, усі його підписники отримують сповіщення.</p>
+    <div class="mermaid">graph LR
+      Subject((Subject)) -- "Notify()" --> ObsA[Observer A]
+      Subject -- "Notify()" --> ObsB[Observer B]
+      Subject -- "Notify()" --> ObsC[Observer C]</div>
+    <h4>Зв'язок із вашим досвідом: Django Signals</h4>
+    <p>Коли ви зберігаєте модель <code>User</code>, система відправляє сигнал <code>post_save</code>.
+      На цей сигнал можуть бути підписані різні, незалежні частини системи:</p>
+    <ul>
+      <li>Сервіс надсилання Welcome Email.</li>
+      <li>Сервіс аналітики.</li>
+      <li>Система створення профілю.</li>
+    </ul>
+    <p>Це дозволяє <b>розв'язати</b> код (зменшити зв'язність). Модель <code>User</code> нічого не знає про email-розсилку.</p>
+    <hr>
+    <h2>Chain of Responsibility (Ланцюжок обов'язків)</h2>
+    <p>Дозволяє передавати запит по ланцюжку потенційних обробників. Кожен обробник вирішує: обробити запит самому, відхилити його або передати далі.</p>
+    <div class="mermaid">graph LR
+      Request --> Auth[Authentication]
+      Auth -- next --> Log[Logging]
+      Log -- next --> RateLimit[Rate Limiter]
+      RateLimit -- next --> View[API Endpoint]</div>
+    <h4>Зв'язок із вашим досвідом</h4>
+    <p>У <b>FastAPI</b> та <b>Django</b> це називається Middleware.
+      Запит від користувача проходить через шари:</p>
+    <ol>
+      <li><code>SecurityMiddleware</code> (безпечно?)</li>
+      <li><code>SessionMiddleware</code> (чи є сесія?)</li>
+      <li><code>CorsMiddleware</code> (звідки запит?)</li>
+      <li>... Ваш код ...</li>
+    </ol>
+    <p>Якщо <code>SecurityMiddleware</code> вирішить, що запит небезпечний, він перерве ланцюжок, і ваш код навіть не дізнається про запит.</p>
+    <hr>
+    <h2>State (Стан)</h2>
+    <p>Дозволяє об'єкту змінювати свою поведінку залежно від внутрішнього стану. Ззовні здається, що об'єкт змінив клас.</p>
+    <h4>Проблема</h4>
+    <pre class="language-python"><code># Антипатерн "Великий IF"
+class Order:
+    def pay(self):
+        if self.status == 'new':
+            ...
+        elif self.status == 'paid':
+            raise Error("Already paid")
+        elif self.status == 'shipped':
+             raise Error("Too late")</code></pre>
+    <h4>Рішення</h4>
+    <p>Винести логіку кожного статуса в окремий клас.</p>
+    <div class="mermaid">stateDiagram-v2
+      [*] --> New
+      New --> Paid : payment_success
+      Paid --> Shipped : ship_order
+      Shipped --> [*]</div>
+    <p>У Python для простих випадків часто використовують бібліотеку <code>transitions</code> (FSM — Finite State Machine), замість ручного написання класів станів.</p>
+    <hr>
+    <h2>Частина 2: Архітектурні Антипатерни</h2>
+    <p>Патерни — це те, як робити <b>треба</b>.
+      Антипатерни — це те, як робити <b>не треба</b>, але як чомусь усі роблять.</p>
+    <p>Знання антипатернів допоможе вам проводити якісне Code Review і не стріляти собі в ногу.</p>
+    <img data-max-width="800" data-id="a16193bf-00b3-4fa5-ab4d-3017775ed1eb" src="https://cdn.javarush.com/images/article/a16193bf-00b3-4fa5-ab4d-3017775ed1eb/800.jpeg" alt="">
+    <hr>
+    <h2>Magic Numbers & Strings (Магічні числа)</h2>
+    <p><b>Антипатерн:</b> Використання чисел або рядків прямо в коді без пояснення.</p>
+    <pre class="language-python"><code># Погано
+if user.access_level == 7: # Що таке 7? Адмін? Модератор? Бог?
+    ...
+time.sleep(86400) # Скільки це часу?</code></pre>
+    <p><b>Як виправити:</b>
+      Використовуйте константи або <code>Enum</code>.</p>
+    <pre class="language-python"><code>from enum import IntEnum
+
+class AccessLevel(IntEnum):
+    ADMIN = 7
+
+if user.access_level == AccessLevel.ADMIN:
+    ...
+SECONDS_IN_DAY = 60 * 60 * 24
+time.sleep(SECONDS_IN_DAY)</code></pre>
+    <hr>
+    <h2>God Class (Божественний об'єкт)</h2>
+    <p><b>Антипатерн:</b> Клас, який знає занадто багато і робить занадто багато.</p>
+    <p>Ознаки:</p>
+    <ul>
+      <li>Файл <code>utils.py</code> або <code>manager.py</code> на 2000 рядків.</li>
+      <li>Назва класу <code>SystemManager</code> або <code>AppCore</code>.</li>
+      <li>Методи: <code>connect_db()</code>, <code>send_email()</code>, <code>calculate_taxes()</code>, <code>render_html()</code>.</li>
+    </ul>
+    <p><b>Чому це погано?</b>
+      Порушення принципу <b>SRP</b> (Single Responsibility Principle). Такий клас неможливо тестувати і страшно змінювати.</p>
+    <p><b>Рішення:</b>
+      Декомпозиція. Розбийте клас на <code>EmailService</code>, <code>TaxCalculator</code>, <code>DBRepository</code>.</p>
+    <hr>
+    <h2>Premature Optimization (Передчасна оптимізація)</h2>
+    <blockquote>"Передчасна оптимізація — корінь усього зла". Дональд Кнут</blockquote>
+    <p><b>Антипатерн:</b>
+      Ви пишете складний, нечитабельний код, використовуючи бітові зсуви або кастомні структури даних, тому що "так буде швидше", хоча ви навіть не запускали профайлер.</p>
+    <p><b>Приклад:</b>
+      Переписувати шматок логіки на C (Cython) до того, як проєкт взагалі запущено.</p>
+    <p><b>Правильний підхід:</b></p>
+    <ol>
+      <li><b>Make it work</b>. Нехай запрацює.</li>
+      <li><b>Make it right</b>. Зробіть код чистим і читабельним.</li>
+      <li><b>Make it fast</b>. Якщо профайлер показав проблему — оптимізуйте тільки вузьке місце.</li>
+    </ol>
+    <hr>
+    <h2>Reinventing the Wheel (Винаходити велосипед)</h2>
+    <p><b>Антипатерн:</b>
+      Писати свої рішення для завдань, які вже вирішені в стандартній бібліотеці або популярних пакетах.</p>
+    <p><b>Приклади:</b></p>
+    <ul>
+      <li>Писати свою функцію парсингу CSV замість модуля <code>csv</code> або <code>pandas</code>.</li>
+      <li>Писати свою криптографію (Ніколи! Не робіть! Цього!).</li>
+      <li>Писати свій ORM.</li>
+    </ul>
+    <p><b>Square Wheel (Квадратне колесо):</b>
+      Коли ваше кастомне рішення не тільки дублює стандартне, але ще й працює гірше/з більшою кількістю багів.</p>
+    <p><b>Порада:</b> Перед написанням утиліти витратьте 5 хвилин на гугління: <i>"python library for X"</i>.</p>
+    <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m5">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

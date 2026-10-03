@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 16: Інтеграція FastAPI із зовнішніми API</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 16: Інтеграція FastAPI із зовнішніми API</h1>
+        <p>Розширення функціоналу вашого застосунку за рахунок інтеграції із зовнішніми сервісами — це ключова навичка сучасного розробника, яка дозволяє уникнути 'винаходу велосипеда'. Ми навчимося ефективно інтегрувати <b>FastAPI із зовнішніми API</b>, що значно прискорить розробку та дозволить використовувати готові, масштабовані рішення.</p>
+        <p>Ви дізнаєтеся, як працюють зовнішні API та навіщо потрібні API-ключі та принципи авторизації. Ключовим інструментом стане бібліотека <b><code>httpx</code></b> — сучасний асинхронний HTTP-клієнт, який дозволяє вашому FastAPI-застосунку залишатися неблокуючим під час очікування відповідей від сторонніх сервісів.</p>
+        <p>Особливу увагу приділимо <b>валідації даних від зовнішніх API за допомогою Pydantic</b> та надійній обробці мережевих та HTTP-помилок, а також коротко розглянемо специфіку взаємодії з GraphQL API.</p>
+        <hr>
+        <h2>Що таке зовнішні API і навіщо вони потрібні?</h2>
+        <p><b>Зовнішній API</b> — це інтерфейс, що надається стороннім сервісом, який дозволяє вашому застосунку програмно взаємодіяти з ним: отримувати дані або виконувати дії.</p>
+        <p>Замість того, щоб створювати з нуля складну функціональність, ви можете інтегрувати готове рішення.</p>
+        <p><b>Навіщо використовувати зовнішні API:</b></p>
+        <ul>
+            <li><b>розширення функціональності:</b> прийом платежів (Stripe), надсилання SMS (Twilio), робота з картами (Google Maps).</li>
+            <li><b>доступ до даних:</b> отримання інформації про авіарейси, курси валют, наукові статті.</li>
+            <li><b>економія часу та ресурсів:</b> ви використовуєте готову, підтримувану та масштабовану інфраструктуру іншого сервісу.</li>
+        </ul>
+        <p>Інтеграція із зовнішніми API — це ключова навичка, що дозволяє створювати більш потужні та функціональні застосунки.</p>
+        <hr>
+        <h2>Як працює інтеграція із зовнішнім API</h2>
+        <p>Процес взаємодії з більшістю REST API зводиться до чотирьох основних кроків.</p>
+        <p><b>Потік взаємодії</b></p>
+        <div class="mermaid">
+            graph LR
+            A[Ваш застосунок] --> B{1 Надіслати HTTP-запит + API-ключ};
+            B --> C[Зовнішній API<br/>Сервер];
+            C --> D{"2 Обробити запит<br/>(перевірити ключ, знайти дані)"};
+            D --> E[3 Надіслати HTTP-відповідь];
+            E --> F[Ваш застосунок];
+            F --> G{4 Обробити відповідь};
+
+            style C fill:#ccf,stroke:#333;
+            style G fill:#cfc,stroke:#333;
+        </div>
+        <ol>
+            <li><b>Реєстрація та отримання API-ключа:</b> майже всі сервіси вимагають реєстрації та отримання унікального ключа (API Key) або токена для ідентифікації вашого застосунку.</li>
+            <li><b>Надсилання HTTP-запиту:</b> ваш застосунок надсилає запит на потрібний URL (ендпоінт) зовнішнього API,водночас передає API-ключ та інші параметри.</li>
+            <li><b>Отримання відповіді:</b> зовнішній сервіс зазвичай повертає відповідь у форматі JSON.</li>
+            <li><b>Обробка відповіді:</b> ваш застосунок парсить JSON, валідує отримані дані та використовує їх у своїй логіці.</li>
+        </ol>
+        <hr>
+        <h2>Бібліотека <code>httpx</code></h2>
+        <p>Для взаємодії із зовнішніми API в асинхронних застосунках, як-от FastAPI, стандартна бібліотека <code>requests</code> не підходить, оскільки вона є такою, що блокує.</p>
+        <p><b><code>httpx</code></b> — це сучасна, швидка та потужна бібліотека для надсилання HTTP-запитів, яка підтримує як синхронний, так і <b>асинхронний</b> режими.</p>
+        <p><b>Встановлення:</b></p>
+        <pre><code class="language-bash">pip install httpx
+pip freeze > requirements.txt
+</code></pre>
+        <p><b>Приклад асинхронного запиту:</b></p>
+        <pre class="language-python"><code>import httpx
+import asyncio
+
+async def fetch_posts():
+    # Використовуємо 'async with' для керування життєвим циклом клієнта
+    async with httpx.AsyncClient() as client:
+        # 'await' призупиняє виконання, поки ми чекаємо на відповідь від мережі
+        response = await client.get("https://jsonplaceholder.typicode.com/posts/1")
+        # Перевірити, чи був запит успішним (статус 2xx)
+        response.raise_for_status()
+        return response.json()
+
+# Для запуску: asyncio.run(fetch_posts())
+</code></pre>
+        <p><code>httpx</code> є стандартом для виконання HTTP-запитів в асинхронному Python-коді.</p>
+        <hr>
+        <h2>Асинхронні GET та POST запити у FastAPI</h2>
+        <p>Інтеграція <code>httpx</code> в ендпоінти FastAPI дозволяє вашому застосунку залишатися неблокуючим та обробляти інші запити, поки він чекає на відповідь від зовнішнього API.</p>
+        <p><b>Приклад GET-запиту:</b></p>
+        <pre class="language-python"><code>from fastapi import FastAPI, HTTPException
+import httpx
+
+app = FastAPI()
+
+@app.get("/external-users/{user_id}")
+async def get_external_user(user_id: int):
+    url = f"https://jsonplaceholder.typicode.com/users/{user_id}"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        # Перевіряємо, що зовнішній сервіс відповів успішно
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Помилка зовнішнього API")
+        return response.json()
+</code></pre>
+        <p><b>Приклад POST-запиту:</b></p>
+        <pre class="language-python"><code>@app.post("/create-external-post/")
+async def create_external_post(title: str, body: str):
+    url = "https://jsonplaceholder.typicode.com/posts"
+    payload = {"title": title, "body": body, "userId": 1}
+    async with httpx.AsyncClient() as client:
+        # Надсилаємо дані у форматі JSON
+        response = await client.post(url, json=payload)
+    return {"status_code": response.status_code, "response_data": response.json()}
+</code></pre>
+        <hr>
+        <h2>Валідація даних від зовнішніх API за допомогою Pydantic</h2>
+        <p>Ніколи не довіряйте даним, що надходять від зовнішніх API. Структура відповіді може змінитися, сервіс може повернути помилку або неочікувані дані. Використовуйте <b>Pydantic-моделі</b> для валідації відповідей.</p>
+        <p><b>Процес:</b></p>
+        <ol>
+            <li>Вивчіть документацію зовнішнього API та створіть Pydantic-модель, що описує очікувану структуру відповіді.</li>
+            <li>Після отримання відповіді від API та її перетворення на JSON, пропустіть ці дані через вашу Pydantic-модель.</li>
+            <li>Якщо валідація проходить успішно, ви можете бути впевнені у структурі та типах даних.</li>
+            <li>Якщо валідація не проходить, обробіть помилку, залогуйте її та поверніть клієнту коректну відповідь.</li>
+        </ol>
+        <p><b>Приклад (API погоди):</b></p>
+        <pre class="language-python"><code>from pydantic import BaseModel, Field, ValidationError
+from typing import List
+
+# 1. Створюємо Pydantic-моделі на основі документації API
+class WeatherDescription(BaseModel):
+    main: str
+    description: str
+
+class MainWeatherData(BaseModel):
+    temp: float
+    feels_like: float = Field(..., alias="feels_like") # Приклад роботи з різними іменами полів
+    temp_min: float = Field(..., alias="temp_min")
+    humidity: int
+
+class WeatherApiResponse(BaseModel):
+    weather: List[WeatherDescription]
+    main: MainWeatherData
+    name: str
+
+# 2. Використовуємо модель у сервісі
+async def get_weather_data(city: str):
+    # ... робимо запит до API та отримуємо response_json ...
+    try:
+        # 3. Валідуємо дані
+        validated_data = WeatherApiResponse.model_validate(response_json)
+        return validated_data
+    except ValidationError as e:
+        # 4. Обробляємо помилку валідації
+        print(f"Помилка валідації даних від API: {e}")
+        return None
+</code></pre>
+        <hr>
+        <h2>Обробка помилок при роботі із зовнішніми сервісами</h2>
+        <p>При роботі з мережею завжди щось може піти не так. Ваш код має бути до цього готовим.</p>
+        <p><b>Мережеві помилки:</b></p>
+        <ul>
+            <li><code>httpx.ConnectError</code>: не вдалося встановити з'єднання (сервіс недоступний, невірна адреса).</li>
+            <li><code>httpx.TimeoutException</code>: сервіс не відповів за вказаний час.</li>
+        </ul>
+        <p><b>HTTP-помилки:</b></p>
+        <ul>
+            <li><code>httpx.HTTPStatusError</code>: сервіс відповів з кодом 4xx (помилка клієнта) або 5xx (помилка сервера). Генерується методом <code>response.raise_for_status()</code>.</li>
+        </ul>
+        <p><b>Патерн обробки помилок:</b></p>
+        <pre class="language-python"><code>import httpx
+from fastapi import HTTPException
+
+async def fetch_data_safely(url: str):
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url)
+            # Перевіряємо, що статус відповіді 2xx. Якщо ні — згенерує HTTPStatusError.
+            response.raise_for_status()
+            return response.json()
+    except httpx.TimeoutException:
+        # Помилка таймауту
+        raise HTTPException(status_code=504, detail="Зовнішній сервіс не відповів вчасно.")
+    except httpx.ConnectError:
+        # Помилка з'єднання
+        raise HTTPException(status_code=503, detail="Не вдалося підключитися до зовнішнього сервісу.")
+    except httpx.HTTPStatusError as e:
+        # Помилка зі статусом 4xx або 5xx
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=f"Зовнішній сервіс повернув помилку: {e.response.text}"
+        )
+</code></pre>
+        <p>Використання <code>try...except</code> та <code>response.raise_for_status()</code> є обов'язковим для створення надійних інтеграцій.</p>
+        <hr>
+        <h2>Інтеграція з GraphQL API</h2>
+        <p>Взаємодія із зовнішнім GraphQL API з FastAPI також здійснюється через <code>httpx</code>, але структура запиту відрізняється.</p>
+        <p><b>Процес:</b></p>
+        <ol>
+            <li>Завжди використовується метод <b>POST</b>.</li>
+            <li>URL завжди один і той самий (ендпоінт GraphQL).</li>
+            <li>Тіло POST-запиту — це JSON, що містить:
+                <ul>
+                    <li><code>query</code>: рядок з вашим GraphQL-запитом.</li>
+                    <li><code>variables</code> (опціонально): словник зі змінними для запиту.</li>
+                </ul>
+            </li>
+        </ol>
+        <p><b>Приклад запиту до публічного API країн:</b></p>
+        <pre class="language-python"><code>import httpx
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/countries/{code}")
+async def get_country_info(code: str):
+    graphql_endpoint = "https://countries.trevorblades.com/"
+    # 1. Формуємо GraphQL-запит
+    query = """
+        query GetCountry($code: ID!) {
+          country(code: $code) {
+            name
+            capital
+            currency
+            languages {
+              name
+            }
+          }
+        }
+    """
+    # 2. Формуємо змінні
+    variables = {"code": code.upper()}
+
+    async with httpx.AsyncClient() as client:
+        # 3. Надсилаємо POST-запит
+        response = await client.post(
+            graphql_endpoint,
+            json={"query": query, "variables": variables},
+        )
+    response.raise_for_status()
+    # 4. Обробляємо відповідь
+    return response.json()["data"]["country"]
+</code></pre>
+        <p>Дані, отримані від GraphQL API, також слід валідувати за допомогою Pydantic.</p>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

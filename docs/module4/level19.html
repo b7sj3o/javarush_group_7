@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 19: Інтеграція Python та Telegram: Telethon і FastAPI</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 19: Інтеграція Python та Telegram: Telethon і FastAPI</h1>
+        <p>Коли стандартні Telegram Bot API обмежують ваш функціонал, і потрібен доступ до можливостей звичайного користувацького акаунту (наприклад, для парсингу чатів або автоматизації від свого імені), на допомогу приходить <b>Telethon</b> — потужна асинхронна Python-бібліотека для прямої взаємодії з Telegram MTProto API.</p>
+        <p>Ви зрозумієте ключові відмінності Telethon від бібліотек для ботів і навчитеся отримувати необхідні <code>api_id</code> та <code>api_hash</code>. Ми створимо та запустимо Telethon-клієнт, освоїмо отримання повідомлень та списків учасників чатів, а також асинхронну відправку повідомлень та файлів. Особливу увагу приділимо реакції на події в реальному часі за допомогою обробників і, головне, безшовній інтеграції Telethon з FastAPI, де клієнт запускатиметься разом з аплікацією, дозволяючи вашим ендпоінтам керувати Telegram-акаунтом або навіть "супер-ботом".</p>
+        <hr>
+        <h2>Що таке Telethon і навіщо він потрібен?</h2>
+        <p><b>Telethon</b> — це асинхронна Python-бібліотека для прямої взаємодії з <b>Telegram API</b>. На відміну від бібліотек для створення ботів, Telethon дозволяє вашому застосунку діяти як <b>звичайний акаунт користувача</b> (або бот).</p>
+        <p><b>Навіщо це потрібно?</b></p>
+        <ul>
+            <li>читання чатів, надсилання повідомлень від свого імені, керування каналами.</li>
+            <li>вивантаження історії повідомлень, списків учасників із публічних та приватних чатів/каналів, де ви є учасником.</li>
+            <li>відстеження повідомлень за ключовими словами в реальному часі.</li>
+            <li>розробка власних версій Telegram-клієнта.</li>
+        </ul>
+        <p>Telethon дає вам повний доступ до всіх можливостей Telegram API, доступних для звичайних користувачів.</p>
+        <hr>
+        <h2>Порівняння бібліотек: Telethon vs <code>python-telegram-bot</code></h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Бібліотека</th>
+                <th>Основне призначення</th>
+                <th>Асинхронність</th>
+                <th>Працює як...</th>
+                <th>Доступ до API</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><b>Telethon</b></td>
+                <td>автоматизація користувача, парсинг</td>
+                <td>так (asyncio)</td>
+                <td>користувач / бот</td>
+                <td>повний (MTProto)</td>
+            </tr>
+            <tr>
+                <td><b><code>python-telegram-bot</code></b></td>
+                <td>створення ботів</td>
+                <td>так (asyncio)</td>
+                <td>лише бот</td>
+                <td>обмежений (Bot API)</td>
+            </tr>
+            <tr>
+                <td><b><code>aiogram</code></b></td>
+                <td>створення ботів</td>
+                <td>так (asyncio)</td>
+                <td>лише бот</td>
+                <td>обмежений (Bot API)</td>
+            </tr>
+            </tbody>
+        </table>
+        <hr>
+        <h2>Встановлення Telethon та налаштування проєкту</h2>
+        <p><b>1. Отримання API ID та API Hash:</b><br>
+            Це ключі для вашого <i>застосунку</i>, а не для бота.</p>
+        <ul>
+            <li>перейдіть на <a href="https://my.telegram.org">my.telegram.org</a> та увійдіть до свого акаунта.</li>
+            <li>оберіть "API development tools" та створіть новий застосунок.</li>
+            <li>ви отримаєте <code>api_id</code> та <code>api_hash</code>.</li>
+        </ul>
+        <p><b>2. Встановлення бібліотеки:</b></p>
+        <pre><code class="language-bash">pip install telethon python-dotenv
+pip freeze > requirements.txt
+</code></pre>
+        <p><b>3. Зберігання ключів (безпека):</b><br>
+            <b>Ніколи</b> не зберігайте <code>api_id</code> та <code>api_hash</code> прямо в коді. Використовуйте змінні середовища.<br>
+            Створіть файл <code>.env</code> у корені проєкту:</p>
+        <pre><code class="language-.env">API_ID=12345678
+API_HASH=a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
+SESSION_NAME=my_telegram_session
+</code></pre>
+        <p><i>Додайте <code>.env</code> та <code>*.session</code> до вашого <code>.gitignore</code>!</i></p>
+        <hr>
+        <h2>Створення та запуск Telegram-клієнта</h2>
+        <p>Клієнт Telethon — це об'єкт, який керує вашим підключенням до Telegram.</p>
+        <p><b>Приклад (<code>client.py</code>):</b></p>
+        <pre class="language-python"><code>import asyncio
+from telethon import TelegramClient
+from decouple import config # Зручна бібліотека для роботи з .env
+
+# Завантажуємо змінні з .env
+API_ID = config('API_ID', cast=int)
+API_HASH = config('API_HASH')
+SESSION_NAME = config('SESSION_NAME')
+
+# Створюємо клієнт
+client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+
+async def main():
+    # Підключаємось до Telegram
+    await client.start()
+    print("Клієнта успішно запущено.")
+    # Отримуємо інформацію про себе
+    me = await client.get_me()
+    print(f"Ви увійшли як: {me.first_name} {me.last_name}")
+    # ... тут буде основна логіка ...
+    # Відключаємось
+    await client.disconnect()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+</code></pre>
+        <p><b>Перший запуск:</b> Telethon попросить вас ввести номер телефону, пароль (якщо є) та код підтвердження з Telegram. Після цього він створить файл сесії (<code>*.session</code>), і повторна авторизація не знадобиться.</p>
+        <hr>
+        <h2>Отримання повідомлень та учасників чату</h2>
+        <p>Після підключення ви можете отримувати інформацію з чатів, у яких ви є учасником.</p>
+        <p><b>Отримати інформацію про чат/канал:</b></p>
+        <pre class="language-python"><code># 'entity' може бути username, посиланням або ID
+entity = await client.get_entity('durov') # @durov
+print(f"Назва: {entity.title}, ID: {entity.id}")
+</code></pre>
+        <p><b>Вивантажити останні 10 повідомлень із чату:</b></p>
+        <pre class="language-python"><code># client.iter_messages() повертає асинхронний генератор
+async for message in client.iter_messages('durov', limit=10):
+    sender = await message.get_sender() # Отримуємо відправника
+    print(f"[{message.date.strftime('%Y-%m-%d %H:%M')}] {sender.username}: {message.text}")
+</code></pre>
+        <p><b>Отримати учасників групи:</b></p>
+        <pre class="language-python"><code># Працює лише для чатів, де ви можете бачити учасників
+async for user in client.iter_participants('some_group_username'):
+    print(f"ID: {user.id}, Ім'я: {user.first_name}, Username: {user.username}")
+</code></pre>
+        <hr>
+        <h2>Асинхронне надсилання повідомлень</h2>
+        <p><b>Надсилання текстового повідомлення:</b></p>
+        <pre class="language-python"><code># Надсилаємо повідомлення до чату 'me' (Збережені повідомлення)
+await client.send_message('me', 'Привіт, це повідомлення від Telethon!')
+</code></pre>
+        <p><b>Надсилання файлу:</b></p>
+        <pre class="language-python"><code># Надсилаємо фото з підписом
+await client.send_file('me', 'path/to/my_photo.jpg', caption='Це я на відпочинку!')
+</code></pre>
+        <p><b>Відповідь на повідомлення:</b></p>
+        <pre class="language-python"><code># message — це об'єкт повідомлення, отриманий раніше
+await message.reply('Це відповідь на ваше повідомлення!')
+</code></pre>
+        <p>Усі ці операції є асинхронними та мають виконуватися з <code>await</code>.</p>
+        <hr>
+        <h2>Реакція на події в реальному часі</h2>
+        <p>Telethon може працювати в режимі "слухача" та реагувати на події (наприклад, нові повідомлення) в реальному часі за допомогою обробників подій.</p>
+        <p><b>Обробка нових повідомлень:</b><br>
+            Декоратор <code>@client.on(events.NewMessage)</code> перетворює функцію на обробник.</p>
+        <pre class="language-python"><code>from telethon import events
+
+# Цей обробник реагуватиме на всі нові вхідні повідомлення
+@client.on(events.NewMessage(incoming=True))
+async def new_message_handler(event):
+    # event.text — текст повідомлення
+    # event.sender_id — ID відправника
+    print(f"Отримано нове повідомлення від {event.sender_id}: {event.text}")
+    if 'питання' in event.text.lower():
+        # Відповідаємо на повідомлення
+        await event.reply('Якщо у вас є питання, зверніться до нашого менеджера @manager_username')
+
+# Щоб обробники працювали, клієнта має потрібно запустити, і він має працювати постійно
+# client.run_until_disconnected()
+</code></pre>
+        <p><b>Інші події:</b> <code>events.ChatAction</code> (хтось увійшов/вийшов із чату), <code>events.MessageEdited</code> та інші.</p>
+        <hr>
+        <h2>Інтеграція Telethon з FastAPI</h2>
+        <p>Ви можете керувати клієнтом Telethon через ендпоінти FastAPI. Це дозволяє створювати вебінтерфейси для автоматизації або запускати дії за зовнішнім тригером.</p>
+        <p><b>Архітектура:</b></p>
+        <ul>
+            <li>Клієнт Telethon ініціалізується та запускається під час старту FastAPI-застосунку (у <code>lifespan</code>).</li>
+            <li>Ендпоінти FastAPI викликають методи клієнта (<code>send_message</code>, <code>get_entity</code> тощо).</li>
+        </ul>
+        <p><b>Приклад (<code>main.py</code>):</b></p>
+        <pre class="language-python"><code>from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from telethon import TelegramClient
+# ... імпорт налаштувань (API_ID, API_HASH, SESSION_NAME) ...
+
+# Створюємо клієнт, але не підключаємо його
+client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Підключаємось під час старту
+    await client.start()
+    print("Telethon-клієнт запущено...")
+    yield
+    # Відключаємось при зупинці
+    await client.disconnect()
+    print("Telethon-клієнт зупинено.")
+
+app = FastAPI(lifespan=lifespan)
+
+@app.post("/send-message/")
+async def send_telegram_message(chat_id: str, message: str):
+    # Використовуємо запущений клієнт для надсилання повідомлення
+    await client.send_message(chat_id, message)
+    return {"status": "Повідомлення надіслано"}
+</code></pre>
+        <p><b>Важливо:</b> обробники подій (<code>@client.on</code>) працюватимуть, доки увімкнено FastAPI-застосунок.</p>
+        <hr>
+        <h2>Приклад: моніторинг чату та надсилання сповіщень</h2>
+        <p><b>Завдання:</b> відстежувати ключові слова в певному чаті та пересилати ці повідомлення до іншого чату (наприклад, адміністратору).</p>
+        <pre class="language-python"><code>from telethon import events
+import asyncio
+
+# ID або username чатів/каналів
+SOURCE_CHAT = 'some_public_channel' # Звідки читаємо
+DESTINATION_CHAT = 'me' # Куди надсилаємо (в "Збережені")
+
+KEYWORDS = ['fastapi', 'python', 'вакансія']
+
+# Створюємо обробник лише для нових повідомлень у SOURCE_CHAT
+@client.on(events.NewMessage(chats=SOURCE_CHAT))
+async def keyword_monitor(event):
+    message_text = event.text.lower()
+    # Перевіряємо, чи є в повідомленні ключові слова
+    if any(keyword in message_text for keyword in KEYWORDS):
+        print(f"Знайдено ключове слово в повідомленні {event.id}")
+        # Пересилаємо повідомлення
+        await client.forward_messages(DESTINATION_CHAT, event.message)
+</code></pre>
+        <p><b>Запуск:</b><br>
+            Цей код працюватиме, доки клієнт увімкнений (наприклад, через <code>client.run_until_disconnected()</code> або всередині FastAPI <code>lifespan</code>).</p>
+        <hr>
+        <h2>Керування ботами через Telethon</h2>
+        <p>Telethon може працювати не лише як користувач, але і як <b>бот</b>. Це корисно, якщо вам потрібні можливості акаунта користувача (наприклад, читання історії чатів) для керування вашим ботом.</p>
+        <p><b>Підключення як бот:</b></p>
+        <pre class="language-python"><code># BOT_TOKEN — токен, отриманий від @BotFather
+await client.start(bot_token=BOT_TOKEN)
+</code></pre>
+        <p><b>Обробка команд (через <code>pattern</code>):</b></p>
+        <pre class="language-python"><code>@client.on(events.NewMessage(pattern='/start'))
+async def start_handler(event):
+    await event.reply('Привіт! Я бот, керований через Telethon.')
+</code></pre>
+        <p><b>Переваги:</b></p>
+        <ul>
+            <li>ви можете використовувати один і той самий синтаксис Telethon для роботи і з акаунтом користувача, і з ботом.</li>
+            <li>можна створити "супербота", де акаунт користувача виконує дії, недоступні звичайному боту (наприклад, додає бота до груп).</li>
+        </ul>
+        <hr>
+        <h2>Повна система сповіщень: FastAPI + Telethon</h2>
+        <p><b>Архітектура:</b></p>
+        <ol>
+            <li><b>FastAPI</b> надає HTTP API для зовнішнього світу (наприклад, для вашого вебзастосунку чи інших сервісів).</li>
+            <li>Ендпоінти FastAPI приймають запити на надсилання сповіщень.</li>
+            <li><b>Telethon</b>, активований всередині FastAPI, отримує команду від ендпоінта та надсилає повідомлення до потрібного Telegram-чату.</li>
+            <li><b>База даних</b> (наприклад, PostgreSQL із SQLAlchemy) може зберігати список чатів для розсилки, шаблони повідомлень тощо.</li>
+        </ol>
+        <p><b>Приклад API для розсилки:</b></p>
+        <pre class="language-python"><code>@app.post("/broadcast/")
+async def broadcast_message(message: str):
+    # Припускаємо, що get_subscriber_chats_from_db() — функція,
+    # яка отримує ID чатів підписників із вашої БД.
+    chat_ids = await get_subscriber_chats_from_db()
+
+    # Асинхронно надсилаємо повідомлення всім підписникам
+    tasks = [client.send_message(chat_id, message) for chat_id in chat_ids]
+    await asyncio.gather(*tasks) # asyncio.gather для паралельного надсилання
+
+    return {"status": "Розсилку запущено", "subscribers_count": len(chat_ids)}
+</code></pre>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

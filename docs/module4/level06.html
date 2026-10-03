@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 6: Основи ORM та SQLAlchemy</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 6: Основи ORM та SQLAlchemy</h1>
+        <p>Пряме написання SQL-запитів у коді може бути багатослівним, схильним до помилок і прив'язувати ваш застосунок до конкретної бази даних. Ми познайомимося з <b>ORM (Object-Relational Mapping)</b> та заглибимося в <b>SQLAlchemy</b> — найпотужніший інструмент, який дозволяє взаємодіяти з реляційними БД мовою Python-об'єктів.</p>
+        <p>Ви зрозумієте, як ORM значно спрощує роботу з даними. Ми налаштуємо асинхронне підключення SQLAlchemy з драйвером <code>psycopg3</code> і безшовно інтегруємо його у FastAPI через систему залежностей. Ви навчитеся створювати моделі даних, виконувати основні CRUD-операції (створення, читання, оновлення, видалення) та ефективно працювати з реляційними зв'язками між таблицями, заклавши надійну основу для повноцінних веб-застосунків.</p>
+        <hr>
+        <h2>Що таке ORM і навіщо вона потрібна?</h2>
+        <p><b>ORM (Object-Relational Mapping)</b> — це щось на кшталт "перекладача", який дозволяє вашому Python-коду спілкуватися з реляційною базою даних мовою об'єктів, а не "чистим" SQL.</p>
+        <p>Замість того, щоб писати <code>INSERT INTO users ...</code>, ви створюєте екземпляр класу <code>User</code> і викликаєте метод <code>.save()</code> (або аналог). ORM бере на себе всю "брудну роботу" з генерації та виконання SQL-запитів.</p>
+        <p><b>Що це дає на практиці:</b></p>
+        <ul>
+            <li>ви пишете на Python, а не перемикаєтесь на SQL.</li>
+            <li>дозволяє легше змінювати СУБД (наприклад, з SQLite на PostgreSQL), оскільки ваш основний код не змінюється.</li>
+            <li>ORM автоматично захищає від базових SQL-ін'єкцій.</li>
+        </ul>
+        <p>Звісно, за цю зручність ми платимо невеликим зниженням продуктивності, але для більшості завдань виграш у швидкості розробки та підтримки це повністю компенсує.</p>
+        <hr>
+        <h2>Знайомство з SQLAlchemy</h2>
+        <img data-max-width="800" data-id="1ebc7e25-8c54-409a-be9b-f2c114bee2f3" src="https://cdn.javarush.com/images/article/1ebc7e25-8c54-409a-be9b-f2c114bee2f3/800.jpeg" alt="">
+        <p><b>SQLAlchemy</b> — це основна і найпотужніша ORM в екосистемі Python, не прив'язана до жодного конкретного фреймворку. Це робить її ідеальним вибором для FastAPI.</p>
+        <p>На відміну від Django ORM, де багато чого приховано "під капотом", SQLAlchemy є більш прозорою. Ви безпосередньо працюватимете з такими концепціями як <b>Engine</b> (керує з'єднаннями з БД) та <b>Session</b> (керує транзакціями й об'єктами).</p>
+        <p>Ми будемо використовувати сучасний синтаксис SQLAlchemy, який чудово працює з анотаціями типів та асинхронністю.</p>
+        <p><b>Приклад запиту:</b></p>
+        <pre class="language-python"><code>from sqlalchemy import select
+
+# Замість 'objects.filter(...)' використовується функція select()
+statement = select(User).where(User.age > 30)
+# Сесія виконує запит і повертає результат
+users = session.scalars(statement).all()
+</code></pre>
+        <p>Підхід є більш багатослівним, ніж у Django, але дає більше контролю.</p>
+        <hr>
+        <h2>Встановлення та налаштування SQLAlchemy</h2>
+        <p><b>Встановлення:</b></p>
+        <pre><code class="language-bash"># Встановлюємо саму бібліотеку
+pip install sqlalchemy
+
+# Встановлюємо асинхронний драйвер для PostgreSQL
+pip install "psycopg[binary,async]"
+
+# Для асинхронного SQLite
+pip install aiosqlite
+
+pip freeze > requirements.txt
+</code></pre>
+        <p><b>Базове асинхронне налаштування (<code>database.py</code>):</b></p>
+        <pre class="language-python"><code>from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
+
+# URL для підключення до PostgreSQL з драйвером asyncpg
+DATABASE_URL = "postgresql+asyncpg://user:password@localhost/db_name"
+
+# Створюємо асинхронний engine
+engine = create_async_engine(DATABASE_URL)
+
+# Фабрика для створення асинхронних сесій
+async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
+
+# Базовий клас для всіх наших моделей
+class Base(DeclarativeBase):
+    pass
+</code></pre>
+        <hr>
+        <h2>Інтеграція з FastAPI</h2>
+        <p>Щоб кожен API-запит отримував власну ізольовану сесію для роботи з БД, ми використовуємо <b>систему залежностей (dependencies)</b> FastAPI.</p>
+        <p><b>Створення залежності для сесії (у <code>database.py</code>):</b></p>
+        <pre class="language-python"><code># ... (код з попереднього слайда) ...
+
+# Залежність, яку ми будемо "інжектити" (inject, вводити) в ендпоінти
+async def get_async_session():
+    async with async_session_maker() as session:
+        yield session
+</code></pre>
+        <p>Цей код гарантує, що сесія буде створена для запиту і коректно закрита після його завершення, навіть у разі помилок.</p>
+        <p><b>Використання в ендпоінті (<code>main.py</code>):</b></p>
+        <pre class="language-python"><code>from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from . import database
+
+@app.get("/users/")
+async def get_users(session: AsyncSession = Depends(database.get_async_session)):
+    # У 'session' тепер знаходиться готова до роботи асинхронна сесія
+    # ... (тут буде ваш код для запиту до БД) ...
+</code></pre>
+        <hr>
+        <h2>Створення моделей даних</h2>
+        <p>Модель у SQLAlchemy — це Python-клас, що описує таблицю в БД. Ми використовуємо декларативний стиль з анотаціями типів.</p>
+        <p><b>Ключові елементи:</b></p>
+        <ul>
+            <li>успадкування від нашого класу <code>Base</code>.</li>
+            <li>атрибут <code>__tablename__</code>, що вказує назву таблиці.</li>
+            <li>атрибути класу з анотаціями <code>Mapped</code> та функцією <code>mapped_column</code> для опису стовпців та їхніх обмежень.</li>
+        </ul>
+        <p><b>Приклад (<code>models.py</code>):</b></p>
+        <pre class="language-python"><code>from sqlalchemy.orm import Mapped, mapped_column
+from .database import Base # Імпортуємо наш Base
+
+class User(Base):
+    __tablename__ = 'users' # Назва таблиці в БД
+
+    # Описуємо стовпці
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(nullable=False)
+    email: Mapped[str] = mapped_column(unique=True, index=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
+</code></pre>
+        <p>Цей підхід дає нам переваги статичної типізації та є легким для читання.</p>
+        <hr>
+        <h2>Основні типи даних та обмеження</h2>
+        <p>SQLAlchemy надає типи даних, які мапляться на відповідні типи в SQL.</p>
+        <table>
+            <thead>
+            <tr>
+                <th>Тип в SQLAlchemy</th>
+                <th>Тип в Python (<code>Mapped[..._]</code>)</th>
+                <th>Опис</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><code>String(size)</code></td>
+                <td><code>str</code></td>
+                <td>рядок з обмеженням</td>
+            </tr>
+            <tr>
+                <td><code>Text</code></td>
+                <td><code>str</code></td>
+                <td>довгий текст</td>
+            </tr>
+            <tr>
+                <td><code>Integer</code></td>
+                <td><code>int</code></td>
+                <td>ціле число</td>
+            </tr>
+            <tr>
+                <td><code>Boolean</code></td>
+                <td><code>bool</code></td>
+                <td>логічне значення</td>
+            </tr>
+            <tr>
+                <td><code>Date</code>, <code>DateTime</code></td>
+                <td><code>date</code>, <code>datetime</code></td>
+                <td>дата та/або час</td>
+            </tr>
+            <tr>
+                <td><code>JSON</code></td>
+                <td><code>dict</code>, <code>list</code></td>
+                <td>зберігання JSON-об'єктів</td>
+            </tr>
+            </tbody>
+        </table>
+        <p><b>Обмеження (аргументи <code>mapped_column</code>):</b></p>
+        <ul>
+            <li><code>primary_key=True</code>: первинний ключ.</li>
+            <li><code>unique=True</code>: унікальність значення.</li>
+            <li><code>nullable=False</code>: поле не може бути порожнім (<code>NOT NULL</code>).</li>
+            <li><code>index=True</code>: створити індекс для прискорення пошуку.</li>
+            <li><code>default=значення</code>: значення за замовчуванням.</li>
+        </ul>
+        <p><b>Приклад:</b></p>
+        <pre class="language-python"><code>from sqlalchemy import String
+from datetime import date
+
+class Post(Base):
+    __tablename__ = 'posts'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(100), unique=True)
+    published_date: Mapped[date] = mapped_column(default=date.today)
+</code></pre>
+        <hr>
+        <h2>CRUD-операції через SQLAlchemy (асинхронно)</h2>
+        <p>Ось як вони виглядають в асинхронному SQLAlchemy.</p>
+        <p><b>Create:</b></p>
+        <pre class="language-python"><code>async def create_user(session: AsyncSession, name: str, email: str):
+    new_user = User(name=name, email=email)
+    session.add(new_user) # Додаємо об'єкт до сесії
+    await session.commit() # Зберігаємо зміни в БД
+    await session.refresh(new_user) # Оновлюємо об'єкт, щоб отримати ID з БД
+    return new_user
+</code></pre>
+        <p><b>Read:</b></p>
+        <pre class="language-python"><code>async def get_user_by_email(session: AsyncSession, email: str):
+    statement = select(User).where(User.email == email)
+    result = await session.execute(statement)
+    user = result.scalar_one_or_none() # Отримати один об'єкт або None
+    return user
+</code></pre>
+        <p><b>Update:</b></p>
+        <pre class="language-python"><code>async def update_user_name(session: AsyncSession, user_id: int, new_name: str):
+    user = await session.get(User, user_id) # .get() — швидкий пошук за Primary Key (PK)
+    if user:
+        user.name = new_name
+        await session.commit()
+    return user
+</code></pre>
+        <p><b>Delete:</b></p>
+        <pre class="language-python"><code>async def delete_user(session: AsyncSession, user_id: int):
+    user = await session.get(User, user_id)
+    if user:
+        await session.delete(user)
+        await session.commit()
+    return user
+</code></pre>
+        <hr>
+        <h2>Робота з реляційними моделями</h2>
+        <p><b>Зв'язок "один-до-багатьох":</b><br>
+            Використовується <code>ForeignKey</code> для створення зв'язку на рівні БД і <code>relationship</code> для зручної навігації між об'єктами в коді.</p>
+        <pre class="language-python"><code>from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import List
+
+class User(Base):
+    __tablename__ = 'users'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # relationship створює атрибут .posts для доступу до списку постів
+    posts: Mapped[List["Post"]] = relationship(back_populates="author")
+
+class Post(Base):
+    __tablename__ = 'posts'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str]
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    # relationship створює атрибут .author для доступу до об'єкта автора
+    author: Mapped["User"] = relationship(back_populates="posts")
+</code></pre>
+        <p>Тепер ви можете легко звертатися: <code>user.posts</code> поверне список постів, а <code>post.author</code> поверне об'єкт <code>User</code>.</p>
+        <p><b>Зв'язок "багато-до-багатьох":</b><br>
+            Реалізується через окрему <i>асоціативну таблицю</i>.</p>
+        <pre class="language-python"><code># ... визначення асоціативної таблиці post_tag_association ...
+class Post(Base):
+    # ...
+    tags: Mapped[List["Tag"]] = relationship(secondary=post_tag_association, back_populates="posts")
+
+class Tag(Base):
+    # ...
+    posts: Mapped[List["Post"]] = relationship(secondary=post_tag_association, back_populates="tags")
+</code></pre>
+        <hr>
+        <h2>Порівняння SQLAlchemy та Django ORM</h2>
+        <p>Обидві ORM виконують одне й те саме завдання, але різними способами.</p>
+        <table>
+            <thead>
+            <tr>
+                <th>Аспект</th>
+                <th>SQLAlchemy</th>
+                <th>Django ORM</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><b>Підхід</b></td>
+                <td>більш "явний" і близький до SQL, дає більше контролю.</td>
+                <td>більш "магічний" та абстрактний, дає швидкість розробки.</td>
+            </tr>
+            <tr>
+                <td><b>Застосування</b></td>
+                <td>ідеальний для FastAPI/Flask та будь-яких Python-проєктів.</td>
+                <td>глибоко інтегрований в екосистему Django.</td>
+            </tr>
+            <tr>
+                <td><b>Міграції</b></td>
+                <td>потребують окремого інструменту (Alembic).</td>
+                <td>вбудовані (<code>makemigrations</code>, <code>migrate</code>).</td>
+            </tr>
+            <tr>
+                <td><b>Запит</b></td>
+                <td><code>select(User).where(User.name == "Alice")</code></td>
+                <td><code>User.objects.filter(name="Alice")</code></td>
+            </tr>
+            </tbody>
+        </table>
+        <p>Django ORM — це швидкий старт у рамках Django. SQLAlchemy — це більш гнучкий та універсальний інструмент, який є стандартом для роботи з БД у FastAPI.</p>
+        <hr>
+        <h2>Тестування CRUD-операцій з <code>pytest</code></h2>
+        <p>Для тестів використовується окрема база даних (зазвичай SQLite in-memory) та асинхронні фікстури.</p>
+        <p><b>Налаштування тестової сесії (<code>tests/conftest.py</code>):</b></p>
+        <pre class="language-python"><code>import pytest_asyncio
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from app.models import Base # Імпортуємо наш Base з моделями
+
+ASYNC_DB_URL = "sqlite+aiosqlite:///:memory:"
+
+@pytest_asyncio.fixture
+async def async_session():
+    engine = create_async_engine(ASYNC_DB_URL)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all) # Створюємо таблиці
+
+    TestingSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+    async with TestingSessionLocal() as session:
+        yield session # Передаємо сесію в тест
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all) # Видаляємо таблиці
+</code></pre>
+        <p><b>Приклад асинхронного тесту:</b></p>
+        <pre class="language-python"><code>import pytest
+from sqlalchemy import select
+from app.models import User
+
+@pytest.mark.asyncio # Маркер для асинхронного тесту
+async def test_create_user(async_session):
+    # Створюємо користувача
+    new_user = User(name="John", email="john@example.com")
+    async_session.add(new_user)
+    await async_session.commit()
+    assert new_user.id is not None
+
+    # Перевіряємо, що він є в базі
+    stmt = select(User).where(User.email == "john@example.com")
+    result = await async_session.execute(stmt)
+    user_from_db = result.scalar_one()
+    assert user_from_db.name == "John"
+</code></pre>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

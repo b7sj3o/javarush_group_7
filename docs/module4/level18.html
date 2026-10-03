@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 18: Основи розробки Telegram-ботів</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 18: Основи розробки Telegram-ботів</h1>
+        <p>Telegram-боти надають потужний канал для взаємодії з користувачами, але їх розгортання та інтеграція вимагають продуманої архітектури. Ми освоїмо основи розробки <b>Telegram-ботів</b> та їх інтеграцію з FastAPI, приділяючи особливу увагу масштабованій моделі <b>Webhooks</b>.</p>
+        <p>Ви дізнаєтеся, як працює Telegram Bot API, і чим Webhooks відрізняються від Polling, що є критично важливим для продакшен-систем. Ми налаштуємо бібліотеку <b><code>python-telegram-bot</code></b> та створимо першого ехо-бота, а потім безшовно інтегруємо його з FastAPI, де ваш API виступатиме в ролі вебхука, приймаючи та обробляючи оновлення від Telegram.</p>
+        <p>Ви навчитеся створювати асинхронні обробники команд та повідомлень, інтегрувати в них запити до зовнішніх API та налаштовувати логування, а також вибудовувати взаємодію бота з власним API FastAPI та базою даних.</p>
+        <hr>
+        <h2>Як працює Telegram Bot API?</h2>
+        <p>Взаємодія між користувачем, Telegram та вашим ботом відбувається через <b>Telegram Bot API</b>.</p>
+        <p><b>Є два способи отримання оновлень (повідомлень від користувача):</b></p>
+        <ol>
+            <li><p><b>Polling:</b></p>
+                <ul>
+                    <li>ваш бот періодично (раз на кілька секунд) надсилає запит до серверів Telegram із запитанням: "Чи є для мене нові повідомлення?".</li>
+                    <li><b>плюси:</b> простота запуску та налагодження, не вимагає зовнішньої IP-адреси.</li>
+                    <li><b>мінуси:</b> затримка у відповіді, зайве навантаження через постійні запити.</li>
+                    <li><b>ідеально для:</b> розробки та налагодження.</li>
+                </ul>
+            </li>
+            <li><p><b>Webhooks:</b></p>
+                <ul>
+                    <li>ви надаєте Telegram URL вашого сервера (ендпоінт).</li>
+                    <li>коли користувач надсилає повідомлення боту, сервери Telegram <b>самі</b> миттєво надсилають POST-запит із даними повідомлення на ваш URL.</li>
+                    <li><b>плюси:</b> миттєва реакція, відсутність зайвих запитів, висока ефективність.</li>
+                    <li><b>мінуси:</b> вимагає публічно доступної IP-адреси та HTTPS.</li>
+                    <li><b>ідеально для:</b> продакшену.</li>
+                </ul>
+            </li>
+        </ol>
+        <p><b>Потік даних через Webhook</b></p>
+        <div class="mermaid">
+            sequenceDiagram
+            participant User as Користувач
+            participant TG as Сервери Telegram
+            participant Bot as Ваш сервер (FastAPI)
+
+            User->>TG: Надсилає повідомлення боту
+            TG->>Bot: POST-запит на Webhook URL із даними повідомлення
+            activate Bot
+            Bot->>Bot: Обробка повідомлення
+            Bot-->>TG: Відповідь (опційно, 200 OK)
+            deactivate Bot
+            TG->>Bot: Запит до Bot API для відправлення відповіді
+            activate Bot
+            Bot-->>TG: Відповідь із повідомленням
+            deactivate Bot
+            TG-->>User: Доставити відповідь користувачу
+        </div>
+        <p>У цій презентації ми сфокусуємося на інтеграції через Webhooks за допомогою FastAPI.</p>
+        <hr>
+        <h2>Встановлення <code>python-telegram-bot</code> та отримання токена</h2>
+        <p><b>1. Встановлення бібліотеки:</b><br>
+            Ми будемо використовувати популярну асинхронну бібліотеку <code>python-telegram-bot</code> (версії 20+).</p>
+        <pre><code class="language-bash"># Встановлюємо бібліотеку з додатковими залежностями для вебхуків
+pip install "python-telegram-bot[ext]" httpx
+pip freeze > requirements.txt
+</code></pre>
+        <p><b>2. Отримання API токена Telegram через <b>@BotFather</b>.</b></p>
+        <hr>
+        <h2>Перший бот: структура та базові команди (Polling)</h2>
+        <p>Спершу створимо простого "ехо-бота", що працює через Polling, щоб зрозуміти основи.</p>
+        <p><b>Файл <code>bot.py</code>:</b></p>
+        <pre class="language-python"><code>import asyncio
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+
+# --- Функції-обробники (хендлери) ---
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробник команди /start."""
+    await update.message.reply_text("Привіт! Я ваш новий бот. Надішліть мені повідомлення, і я його повторю.")
+
+async def echo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробник, який повторює текстові повідомлення."""
+    text = update.message.text
+    await update.message.reply_text(f"Ви написали: {text}")
+
+# --- Основна логіка ---
+def main():
+    # Вставте ваш токен сюди
+    TOKEN = "ВАШ_API_ТОКЕН_БОТА"
+    # Створюємо застосунок
+    application = Application.builder().token(TOKEN).build()
+
+    # Реєструємо обробники
+    application.add_handler(CommandHandler("start", start_command))
+    # Цей обробник реагує на будь-який текст, що не є командою
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo_handler))
+
+    # Запускаємо бота в режимі Polling
+    print("Бот запущений...")
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
+</code></pre>
+        <ul>
+            <li><code>CommandHandler</code>: реагує на команди (починаються з <code>/</code>).</li>
+            <li><code>MessageHandler</code>: реагує на повідомлення певного типу (текст, фото тощо).</li>
+        </ul>
+        <hr>
+        <h2>Інтеграція з FastAPI через Webhooks</h2>
+        <p>Тепер перенесемо логіку бота на FastAPI, щоб він працював через Webhooks.</p>
+        <p><b>Процес:</b></p>
+        <ol>
+            <li>FastAPI-застосунок має один ендпоінт (наприклад, <code>/webhook</code>), який приймає POST-запити від Telegram.</li>
+            <li>Під час старту застосунку ми "повідомляємо" Telegram про цей URL за допомогою методу <code>set_webhook</code>.</li>
+            <li>Коли надходить запит, ми перетворюємо його JSON-тіло на об'єкт <code>Update</code> і передаємо на обробку до нашого застосунку <code>python-telegram-bot</code>.</li>
+        </ol>
+        <p><b>Приклад (<code>main.py</code>):</b></p>
+        <pre class="language-python"><code>from fastapi import FastAPI, Request, Response
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import asyncio
+
+# --- Налаштування ---
+TOKEN = "ВАШ_API_ТОКЕН_БОТА"
+WEBHOOK_URL = "https://your-public-domain.com/webhook" # URL має бути публічним (використовуйте ngrok для локальної розробки)
+
+# --- Обробники (як у минулому прикладі) ---
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE): ...
+async def echo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE): ...
+
+# --- Логіка FastAPI ---
+# Створюємо застосунок PTB, але не запускаємо run_polling
+ptb_app = Application.builder().token(TOKEN).build()
+ptb_app.add_handler(CommandHandler("start", start_command))
+ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo_handler))
+
+# Створюємо FastAPI застосунок
+app = FastAPI()
+
+@app.on_event("startup")
+async def startup_event():
+    # Встановлюємо вебхук при старті
+    await ptb_app.bot.set_webhook(url=WEBHOOK_URL)
+
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    """Приймає оновлення від Telegram."""
+    update_data = await request.json()
+    update = Update.de_json(update_data, ptb_app.bot)
+    await ptb_app.process_update(update)
+    return Response(status_code=200) # Повертаємо 200 OK, щоб Telegram не надсилав запит повторно
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Видаляємо вебхук при зупинці
+    await ptb_app.bot.delete_webhook()
+</code></pre>
+        <p><i>Для локальної розробки використовуйте <code>ngrok</code> для отримання публічного URL.</i></p>
+        <hr>
+        <h2>Асинхронна обробка та зовнішні API</h2>
+        <p>Усі обробники в <code>python-telegram-bot</code> (v20+) є асинхронними (<code>async def</code>). Це дозволяє легко інтегрувати в них асинхронні операції, наприклад, запити до зовнішніх API за допомогою <code>httpx</code>.</p>
+        <p><b>Приклад команди <code>/weather</code>:</b></p>
+        <p><b>1. Сервісна функція для запиту до API погоди:</b></p>
+        <pre class="language-python"><code># services/weather.py
+import httpx
+from typing import Optional
+
+OPENWEATHER_API_KEY = "ВАШ_КЛЮЧ_OPENWEATHER"
+BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+
+async def get_weather(city: str) -> Optional[str]:
+    params = {"q": city, "appid": OPENWEATHER_API_KEY, "units": "metric", "lang": "uk"}
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(BASE_URL, params=params)
+            response.raise_for_status() # Перевірка на 4xx/5xx помилки
+            data = response.json()
+            temp = data["main"]["temp"]
+            desc = data["weather"][0]["description"]
+            return f"Погода в місті {city}: {temp}°C, {desc}."
+        except httpx.HTTPStatusError:
+            return f"Не вдалося знайти місто '{city}'. Спробуйте ще раз."
+        except Exception:
+            return "Сталася помилка під час запиту погоди."
+</code></pre>
+        <p><b>2. Обробник команди в боті:</b></p>
+        <pre class="language-python"><code># bot_handlers.py
+from services.weather import get_weather
+
+async def weather_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Будь ласка, вкажіть місто. Приклад: /weather Київ")
+        return
+    city = " ".join(context.args)
+    weather_text = await get_weather(city) # Асинхронний виклик
+    await update.message.reply_text(weather_text)
+
+# У main.py: ptb_app.add_handler(CommandHandler("weather", weather_command))
+</code></pre>
+        <hr>
+        <h2>Логування подій та помилок</h2>
+        <p>Логування є критично важливим для налагодження та розуміння того, як користувачі взаємодіють з вашим ботом.</p>
+        <p><b>Налаштування логування:</b><br>
+            Використовуйте стандартний модуль <code>logging</code> Python.</p>
+        <pre class="language-python"><code>import logging
+
+# Налаштовуємо базовий логер
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+# Вимикаємо занадто "гучні" логери від бібліотек
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
+logger = logging.getLogger(__name__)
+</code></pre>
+        <p><b>Приклад використання в обробнику:</b></p>
+        <pre class="language-python"><code>async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    # Логуємо важливу подію
+    logger.info(
+        "Користувач %s (ID: %s) запустив команду /start.", user.username, user.id
+    )
+    await update.message.reply_text(f"Привіт, {user.first_name}!")
+</code></pre>
+        <p>У продакшені налаштуйте логування у файли або централізовану систему (Sentry, ELK).</p>
+        <hr>
+        <h2>Інтеграція бота з вашим FastAPI та БД</h2>
+        <p>Часто боту потрібно зберігати або отримувати дані з тієї ж бази даних, що й ваш основний API.</p>
+        <p><b>Архітектура:</b></p>
+        <ul>
+            <li><b>FastAPI</b> надає CRUD API для роботи з даними (наприклад, <code>/api/users/</code>, <code>/api/notes/</code>).</li>
+            <li><b>Telegram-бот</b> (що працює як частина того ж FastAPI-застосунку або як окремий сервіс) <b>не звертається до БД безпосередньо</b>. Натомість він робить <b>HTTP-запити</b> до власного API.</li>
+        </ul>
+        <p><b>Чому так?</b></p>
+        <ul>
+            <li><b>розподіл відповідальності:</b> API відповідає за бізнес-логіку та роботу з БД, бот — за взаємодію з користувачем.</li>
+            <li><b>повторне використання коду:</b> логіка (наприклад, створення користувача) пишеться один раз в API і використовується як з вебу, так і з бота.</li>
+            <li><b>безпека та масштабованість:</b> API може мати власну автентифікацію та масштабуватися незалежно від бота.</li>
+        </ul>
+        <p><b>Приклад: реєстрація користувача через команду <code>/start</code></b></p>
+        <pre class="language-python"><code># bot_handlers.py
+import httpx
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    api_url = "http://127.0.0.1:8000/api/users/" # URL вашого API
+    user_data = {"telegram_id": user.id, "username": user.username, "first_name": user.first_name}
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(api_url, json=user_data)
+            if response.status_code == 201: # Created
+                await update.message.reply_text(f"Привіт, {user.first_name}! Вас успішно зареєстровано.")
+            elif response.status_code == 400: # Bad Request (наприклад, користувач вже існує)
+                await update.message.reply_text("Ви вже були зареєстровані раніше.")
+            else:
+                response.raise_for_status()
+        except httpx.RequestError:
+            await update.message.reply_text("Не вдалося зв'язатися з сервером. Спробуйте пізніше.")
+</code></pre>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

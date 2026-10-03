@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 17: Інтеграція FastAPI з Google API</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 17: Інтеграція FastAPI з Google API</h1>
+        <p>Google пропонує величезну екосистему потужних API, які можуть значно розширити функціонал вашого застосунку, але їх інтеграція вимагає уважного налаштування автентифікації. Ми зануримося у світ <b>Google API</b> та навчимося інтегрувати їх із FastAPI.</p>
+        <p>Ви дізнаєтеся про ключові концепції <b>Google Cloud Console</b>, такі як сервісні акаунти для серверної автоматизації, OAuth2 для доступу від імені користувача та області доступу (scopes). Ми освоїмо використання бібліотеки <code>google-api-python-client</code> для взаємодії з Google Sheets API (читання та запис даних) та Google Drive API (завантаження файлів, створення папок), забезпечуючи при цьому неблокуючу роботу FastAPI за допомогою <code>asyncio.to_thread</code>.</p>
+        <p>Також розглянемо пряме використання <b><code>httpx</code></b> для простіших REST API, таких як Google Maps Geocoding, та питання обробки помилок і лімітів при роботі з сервісами Google.</p>
+        <hr>
+        <h2>Що таке Google API і навіщо вони потрібні?</h2>
+        <p>Інтеграція з Google API дозволяє швидко додати до проєкту складну функціональність, розробка якої з нуля була б дуже дорогою та довгою.</p>
+        <img data-max-width="800" data-id="dcc60392-ba72-45f0-9038-89cad29fb900" src="https://cdn.javarush.com/images/article/dcc60392-ba72-45f0-9038-89cad29fb900/800.jpeg" alt="">
+        <p>Взаємодія з Google API будується на кількох ключових концепціях:</p>
+        <ul>
+            <li><b>аутентифікація та авторизація:</b> доступ до API захищений. Ви повинні довести, що ваш застосунок має право виконувати ті чи інші дії.</li>
+            <li><b>сервісний акаунт (Service Account):</b> спеціальний "нелюдський" акаунт Google, який представляє ваш застосунок (бота, сервер). Використовується для автоматизації завдань від імені застосунку, а не конкретного користувача.</li>
+            <li><b>OAuth2:</b> стандарт авторизації, що використовується для отримання доступу до даних користувача <i>з його дозволу</i>.</li>
+            <li><b>токени доступу (Access Tokens):</b> тимчасові ключі (<code>access_token</code>, <code>refresh_token</code>), які ваш застосунок використовує для автентифікації запитів до API.</li>
+            <li><b>scopes (області доступу):</b> визначають, на які саме права робить запит ваш застосунок (наприклад, <code>.../auth/spreadsheets.readonly</code> — лише читання таблиць, <code>.../auth/drive</code> — повний доступ до Drive).</li>
+        </ul>
+        <hr>
+        <h2>Налаштування проєкту в Google Cloud Console</h2>
+        <p>Перш ніж писати код, необхідно налаштувати проєкт у Google Cloud.</p>
+        <p><b>Основні кроки:</b></p>
+        <ol>
+            <li><b>Створити проєкт:</b> перейдіть до <a href="https://console.cloud.google.com">Google Cloud Console</a> і створіть новий проєкт.</li>
+            <li><b>Увімкнути потрібні API:</b> у розділі "API та сервіси" -> "Бібліотека" знайдіть та увімкніть необхідні API (наприклад, "Google Sheets API", "Google Drive API").</li>
+            <li><b>Налаштувати автентифікацію:</b>
+                <ul>
+                    <li><b>для автоматизації (сервер-сервер):</b> створіть <b>сервісний акаунт</b> у розділі "IAM та адміністрування" -> "Сервісні акаунти". Завантажте JSON-файл із ключами — це ваш "пароль".</li>
+                    <li><b>для доступу до даних користувачів:</b> створіть <b>облікові дані OAuth 2.0</b> (Client ID) у розділі "API та сервіси" -> "Облікові дані".</li>
+                </ul>
+            </li>
+            <li><b>Надати доступ:</b> якщо ви використовуєте сервісний акаунт, не забудьте "поділитися" з ним вашим Google-документом (таблицею, папкою на Диску), вказавши email сервісного акаунта в налаштуваннях доступу, ніби це звичайний користувач.</li>
+        </ol>
+        <p><b>Процес налаштування</b></p>
+        <div class="mermaid">
+            graph TD
+            A[Створити проєкт у GCP] --> B(Увімкнути потрібні API<br/>Sheets, Drive...);
+            B --> C{Який тип доступу?};
+            C -- Сервер-Сервер --> D[Створити Сервісний Акаунт];
+            D --> E[Завантажити JSON-ключ];
+            E --> F[Поділитися ресурсом з<br/>email-адресою сервісного акаунта];
+            C -- Від імені користувача --> G[Створити OAuth 2.0 Client ID];
+            G --> H[Отримати Client ID & Secret];
+        </div>
+        <hr>
+        <h2>Аутентифікація</h2>
+        <p>Для серверних завдань (наприклад, FastAPI-бекенд, що працює з вашою таблицею) найчастіше використовується <b>сервісний акаунт</b>.</p>
+        <p><b>Бібліотека Google для Python:</b></p>
+        <pre><code class="language-bash">pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+</code></pre>
+        <p><b>Приклад отримання облікових даних із JSON-файлу:</b></p>
+        <pre class="language-python"><code>from google.oauth2 import service_account
+
+# Шлях до завантаженого JSON-файлу
+SERVICE_ACCOUNT_FILE = 'path/to/your-service-account.json'
+# Області доступу (scopes), які потрібні вашому застосунку
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+
+# Створюємо об'єкт credentials
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE,
+    scopes=SCOPES
+)
+</code></pre>
+        <p>Цей об'єкт <code>credentials</code> буде використовуватися для аутентифікації ваших запитів до Google API.</p>
+        <hr>
+        <h2>Робота з Google Sheets API</h2>
+        <p><b>Читання даних із таблиці:</b><br>
+            Бібліотека <code>google-api-python-client</code> є <b>синхронною</b>. В асинхронному FastAPI її слід запускати в окремому потоці, щоб не блокувати event loop.</p>
+        <pre class="language-python"><code>from googleapiclient.discovery import build
+import asyncio
+
+# credentials — із попереднього слайда
+# SPREADSHEET_ID — ID вашої таблиці з URL
+
+async def read_sheet():
+    # Створюємо клієнт для Google Sheets API
+    service = build('sheets', 'v4', credentials=credentials)
+    # Виконуємо синхронний код в окремому потоці
+    result = await asyncio.to_thread(
+        service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range='Sheet1!A1:C10' # Діапазон комірок
+        ).execute
+    )
+    return result.get('values', [])
+</code></pre>
+        <p><b>Додавання рядків до таблиці:</b></p>
+        <pre class="language-python"><code>async def append_to_sheet(values: list):
+    service = build('sheets', 'v4', credentials=credentials)
+    body = {'values': values} # values — це список списків, [[row1_colA, row1_colB], [row2_colA, ...]]
+    await asyncio.to_thread(
+        service.spreadsheets().values().append(
+            spreadsheetId=SPREADSHEET_ID,
+            range='Sheet1!A1', # Почати пошук порожнього рядка з A1
+            valueInputOption='RAW', # Дані вставляються як є
+            insertDataOption='INSERT_ROWS',
+            body=body
+        ).execute
+    )
+</code></pre>
+        <hr>
+        <h2>Робота з Google Drive API</h2>
+        <p>Аналогічно до Sheets, для Drive використовується той самий <code>google-api-python-client</code>.</p>
+        <p><b>Завантаження файлу:</b></p>
+        <pre class="language-python"><code>from googleapiclient.http import MediaFileUpload
+
+async def upload_file_to_drive(file_path: str, file_name: str):
+    service = build('drive', 'v3', credentials=credentials)
+    # Описуємо метадані файлу
+    file_metadata = {'name': file_name}
+    # Описуємо медіа-контент для завантаження
+    media = MediaFileUpload(file_path, mimetype='application/pdf')
+
+    # Запускаємо завантаження в окремому потоці
+    file = await asyncio.to_thread(
+        service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id' # Які поля повернути у відповіді
+        ).execute
+    )
+    return file.get('id')
+</code></pre>
+        <p><b>Створення папки:</b></p>
+        <pre class="language-python"><code>async def create_drive_folder(folder_name: str):
+    service = build('drive', 'v3', credentials=credentials)
+    folder_metadata = {
+        'name': folder_name,
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    folder = await asyncio.to_thread(
+        service.files().create(body=folder_metadata, fields='id').execute
+    )
+    return folder.get('id')
+</code></pre>
+        <hr>
+        <h2>Робота з Google Maps API</h2>
+        <p>Для простіших REST API від Google, таких як Maps Geocoding, зручніше використовувати <code>httpx</code> напряму, оскільки це природно асинхронний підхід.</p>
+        <p><b>Геокодування (перетворення адреси на координати):</b></p>
+        <pre class="language-python"><code>import httpx
+from fastapi import HTTPException
+
+# GOOGLE_MAPS_API_KEY — ваш ключ API, що зберігається в .env
+async def geocode_address(address: str):
+    url = "https://maps.googleapis.com/maps/api/geocode/json"
+    params = {"address": address, "key": GOOGLE_MAPS_API_KEY}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, params=params)
+        if response.status_code != 200:
+            raise HTTPException(status_code=502, detail="Помилка API геокодування")
+
+        data = response.json()
+        if not data.get("results"):
+            raise HTTPException(status_code=404, detail="Адресу не знайдено")
+
+        location = data["results"][0]["geometry"]["location"]
+        return location # -> {"lat": ..., "lng": ...}
+</code></pre>
+        <p>Цей підхід ідеально вписується в асинхронну природу FastAPI.</p>
+        <hr>
+        <h2>Обробка помилок та лімітів</h2>
+        <p>Під час роботи з Google API ваш код має бути готовим до помилок.</p>
+        <p><b>Основні типи помилок:</b></p>
+        <ul>
+            <li><b>мережеві помилки:</b> таймаути, проблеми з DNS (обробляються <code>httpx.RequestError</code>).</li>
+            <li><b>HTTP-помилки:</b> 4xx (невірні права, перевищено квоту) та 5xx (проблеми на стороні Google).</li>
+        </ul>
+        <p><b>Стратегії обробки:</b></p>
+        <ul>
+            <li><b>використовуйте <code>try...except</code>:</b> завжди обгортайте виклики API в блоки обробки винятків.</li>
+            <li><b>перевіряйте статус-код:</b> аналізуйте код відповіді та повертайте клієнту зрозумілу помилку (<code>HTTPException</code>).</li>
+            <li><b>реалізуйте повторні спроби (Retry):</b> для помилок <code>429</code> (Too Many Requests) та <code>5xx</code> корисно почекати деякий час і повторити запит (патерн Exponential Backoff).</li>
+            <li><b>кешуйте результати:</b> щоб зменшити кількість запитів і не перевищувати ліміти.</li>
+        </ul>
+        <hr>
+        <h2>Приклад інтеграції: запис даних у Google Sheets з FastAPI</h2>
+        <pre class="language-python"><code>from fastapi import FastAPI, Depends, HTTPException
+from pydantic import BaseModel
+# ... (імпорти та налаштування credentials з попередніх слайдів) ...
+
+app = FastAPI()
+SPREADSHEET_ID = "ваш_id_таблиці"
+
+class UserLead(BaseModel):
+    name: str
+    email: str
+    phone: str
+
+@app.post("/leads/submit")
+async def submit_lead(lead_data: UserLead):
+    # Готуємо дані для запису (один рядок, три стовпці)
+    values_to_append = [[
+        lead_data.name,
+        lead_data.email,
+        lead_data.phone
+    ]]
+    body = {'values': values_to_append}
+
+    # Викликаємо асинхронну функцію для додавання даних
+    await append_to_sheet(body)
+
+    return {"status": "success", "message": "Дані успішно додано до таблиці."}
+
+async def append_to_sheet(body: dict):
+    # Ця функція може бути в окремому сервісному шарі
+    try:
+        service = build('sheets', 'v4', credentials=credentials)
+        await asyncio.to_thread(
+            service.spreadsheets().values().append(
+                spreadsheetId=SPREADSHEET_ID,
+                range='Leads!A1', # Записувати в аркуш "Leads"
+                valueInputOption='RAW',
+                body=body
+            ).execute
+        )
+    except Exception as e:
+        # Тут має бути належне логування помилки
+        raise HTTPException(status_code=500, detail="Помилка під час запису в Google Sheets.")
+</code></pre>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

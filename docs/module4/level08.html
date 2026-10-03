@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 8: NoSQL та MongoDB</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 8: NoSQL та MongoDB</h1>
+        <p>Реляційні бази даних не завжди є оптимальним вибором, коли йдеться про швидкозмінні, неструктуровані або дуже великі обсяги даних, що потребують горизонтального масштабування. Ми зануримося у світ <b>NoSQL</b>, сфокусувавшись на <b>MongoDB</b> — провідній документоорієнтованій базі даних.</p>
+        <p>Ви дізнаєтеся її ключові відмінності від традиційних SQL-баз, зрозумієте, коли гнучка схема та денормалізація стають перевагою, а також познайомитеся з основними концепціями, такими як документи та колекції. Ми налаштуємо асинхронне підключення MongoDB до FastAPI за допомогою офіційного драйвера <b><code>motor</code></b>, навчимося виконувати всі CRUD-операції, створювати індекси для оптимізації запитів та використовувати мультидокументні ACID-транзакції, які відкривають нові можливості для роботи з NoSQL.</p>
+        <hr>
+        <h2>Що таке NoSQL?</h2>
+        <p><b>NoSQL</b> — це не "анти-SQL", а радше <b>"Not Only SQL"</b> (Не тільки SQL). Це загальна назва для баз даних, які не використовують класичну реляційну модель з таблицями та строгими схемами.</p>
+        <p><b>Ключові відмінності від SQL:</b></p>
+        <ul>
+            <li><b>гнучка схема:</b> ви можете додавати документи з різною структурою до однієї колекції. Немає потреби в <code>ALTER TABLE</code> для додавання нового поля.</li>
+            <li><b>масштабованість:</b> NoSQL бази даних зазвичай простіше масштабувати горизонтально (додаючи більше серверів), ніж SQL бази (де зазвичай збільшують потужність одного сервера).</li>
+            <li><b>різні моделі даних:</b> дані можуть зберігатися не лише в таблицях, а й у вигляді документів (JSON/BSON), пар ключ-значення, графів або колонок.</li>
+        </ul>
+        <p><b>Типи NoSQL баз даних:</b></p>
+        <ul>
+            <li><b>документоорієнтовані (MongoDB):</b> наш фокус на цьому рівні.</li>
+            <li><b>ключ-значення (Redis):</b> ідеально для кешування.</li>
+            <li><b>графові (Neo4j):</b> для аналізу зв'язків (соцмережі, рекомендації).</li>
+            <li><b>колонкові (Cassandra):</b> для великих обсягів запису (Big Data).</li>
+        </ul>
+        <img data-max-width="800" data-id="06e3edc2-2d24-42da-87ed-86db53700077" src="https://cdn.javarush.com/images/article/06e3edc2-2d24-42da-87ed-86db53700077/800.jpeg" alt="">
+        <hr>
+        <h2>Коли обирати NoSQL?</h2>
+        <p>Вибір між SQL та NoSQL залежить від завдання. NoSQL є особливо корисним, коли:</p>
+        <ul>
+            <li><b>структура даних не до кінця визначена або часто змінюється:</b> ідеально для стартапів, MVP та проєктів зі швидкою еволюцією.</li>
+            <li><b>потрібна висока продуктивність на запис та читання:</b> наприклад, для систем логування, аналітики, IoT.</li>
+            <li><b>потрібна висока доступність та горизонтальне масштабування:</b> для високонавантажених систем, які мають витримувати великий трафік.</li>
+            <li><b>дані мають природну ієрархічну або графову структуру:</b> наприклад, профілі користувачів із вкладеними даними, соціальні зв'язки.</li>
+        </ul>
+        <p><b>Не варто обирати NoSQL, якщо:</b></p>
+        <ul>
+            <li>вам потрібні складні транзакції та 100% гарантія цілісності даних (ACID), як у банківських системах (хоча сучасні NoSQL, включно з MongoDB, вже підтримують транзакції).</li>
+            <li>усі ваші дані дуже структуровані та рідко змінюються.</li>
+        </ul>
+        <hr>
+        <h2>Основні концепції MongoDB</h2>
+        <p>MongoDB — це документоорієнтована NoSQL база даних.</p>
+        <ul>
+            <li><b>Document:</b> основна одиниця даних. Це BSON-об'єкт (бінарний JSON), що дуже схожий на словник Python або об'єкт JSON.</li>
+            <li><b>Collection:</b> група документів. Це аналог таблиці в SQL, але без строгої схеми.</li>
+            <li><b><code>_id</code>:</b> унікальний ідентифікатор для кожного документа в колекції. Якщо ви не вказуєте його самі, MongoDB згенерує його автоматично (типу ObjectId). У JSON-поданні <code>_id</code> зазвичай відображається як рядок.</li>
+            <li><b>Денормалізація:</b> у MongoDB прийнято зберігати пов'язані дані всередині одного документа (embedding), а не розносити їх різними таблицями і використовувати JOIN, як у SQL. Це прискорює читання, але може ускладнити оновлення.</li>
+        </ul>
+        <p><b>Приклад документа в колекції <code>users</code>:</b></p>
+        <pre><code class="language-json">{
+  "_id": "64a5f2b3e8c1d2e3f4a5b6c7",
+  "username": "alex",
+  "email": "alex@example.com",
+  "is_active": true,
+  "roles": ["editor", "user"],
+  "profile": {
+    "location": "New York",
+    "bio": "Software developer."
+  }
+}
+</code></pre>
+        <p>Зверніть увагу, що <code>_id</code> тут поданий як рядок, як це зазвичай буває при серіалізації для API.</p>
+        <hr>
+        <h2>Встановлення та підключення до MongoDB</h2>
+        <p><b>Варіанти встановлення:</b></p>
+        <ul>
+            <li><p><b>Docker:</b></p>
+                <pre><code class="language-bash">docker run --name my-mongo -d -p 27017:27017 mongo
+</code></pre>
+            </li>
+            <li><b>MongoDB Atlas:</b> хмарна версія MongoDB, ідеальна для продакшену, не вимагає ручного налаштування.</li>
+            <li><b>Локальна установка:</b> завантажити та встановити MongoDB Community Server з офіційного сайту.</li>
+        </ul>
+        <p><b>Connection String:</b><br>
+            Формат: <code>mongodb://[username:password@]host[:port]/[database]</code></p>
+        <ul>
+            <li><b>локально:</b> <code>mongodb://localhost:27017</code></li>
+            <li><b>з автентифікацією:</b> <code>mongodb://user:password@localhost:27017</code></li>
+            <li><b>в Atlas:</b> ви отримаєте рядок підключення в інтерфейсі Atlas.</li>
+        </ul>
+        <p><b>Перевірка роботи через <code>mongosh</code> (CLI):</b></p>
+        <pre><code class="language-bash"># Підключитися до локального сервера
+mongosh
+
+# Переключитися на базу (створиться при першому записі)
+use myFastApiDb
+
+# Вставити документ
+db.users.insertOne({ name: "Alice", age: 30 })
+
+# Знайти документ
+db.users.find({ name: "Alice" })
+</code></pre>
+        <hr>
+        <h2>FastAPI + MongoDB: асинхронне підключення</h2>
+        <p>Для асинхронної роботи з MongoDB з FastAPI використовується бібліотека <b><code>motor</code></b>. Це офіційний асинхронний драйвер від розробників MongoDB.</p>
+        <p><b>Встановлення:</b></p>
+        <pre><code class="language-bash">pip install motor
+pip freeze > requirements.txt
+</code></pre>
+        <p><b>Налаштування підключення (<code>database.py</code>):</b></p>
+        <pre class="language-python"><code>from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+
+# --- Налаштування ---
+MONGO_DETAILS = "mongodb://localhost:27017"
+DB_NAME = "myFastApiDb"
+
+# --- Клієнт та підключення ---
+client = AsyncIOMotorClient(MONGO_DETAILS)
+database = client[DB_NAME] # Отримуємо об'єкт бази даних
+
+# Функція для отримання об'єкта бази даних (можна використовувати як залежність)
+def get_database() -> AsyncIOMotorDatabase:
+    return database
+</code></pre>
+        <p><b>Використання в ендпоінті:</b></p>
+        <pre class="language-python"><code>from fastapi import FastAPI, Depends
+
+app = FastAPI()
+users_collection = database.get_collection("users") # Отримуємо об'єкт колекції
+
+@app.get("/users/me")
+async def get_my_user():
+    # await — оскільки всі операції motor є асинхронними
+    user_data = await users_collection.find_one({"username": "alex"})
+    # Потрібно обробити _id, оскільки він не серіалізується в JSON за замовчуванням
+    if user_data:
+        user_data["_id"] = str(user_data["_id"])
+    return user_data
+</code></pre>
+        <hr>
+        <h2>CRUD-операції в MongoDB з <code>motor</code></h2>
+        <p>Усі операції з <code>motor</code> асинхронні та вимагають <code>await</code>.</p>
+        <p><b>Create:</b></p>
+        <pre class="language-python"><code># insert_one: вставити один документ
+new_user = {"name": "Bob", "age": 25}
+result = await collection.insert_one(new_user)
+print(f"Вставлено документ з id: {result.inserted_id}")
+
+# insert_many: вставити список документів
+# await collection.insert_many([user1, user2])
+</code></pre>
+        <p><b>Read:</b></p>
+        <pre class="language-python"><code># find_one: знайти перший документ, що відповідає фільтру
+user = await collection.find_one({"name": "Bob"})
+
+# find: знайти всі документи, що відповідають фільтру (повертає курсор)
+async for doc in collection.find({"age": {"$gt": 20}}): # $gt -> greater than
+    print(doc)
+</code></pre>
+        <p><b>Update:</b></p>
+        <pre class="language-python"><code># update_one: оновити перший знайдений документ
+await collection.update_one(
+    {"name": "Bob"}, # Фільтр для пошуку документа
+    {"$set": {"age": 26, "is_active": True}} # Оператор $set для оновлення полів
+)
+# update_many: оновити всі знайдені документи
+</code></pre>
+        <p><b>Delete:</b></p>
+        <pre class="language-python"><code># delete_one: видалити перший знайдений документ
+await collection.delete_one({"name": "Bob"})
+# delete_many: видалити всі знайдені документи
+</code></pre>
+        <hr>
+        <h2>Робота з колекціями та індексами</h2>
+        <p>У MongoDB колекція та база даних створюються автоматично під час першого вставлення документа. Немає необхідності виконувати <code>CREATE TABLE</code>.</p>
+        <p><b>Індекси:</b></p>
+        <ul>
+            <li>як і в SQL, індекси <b>критично важливі</b> для продуктивності операцій читання. Без індексів MongoDB скануватиме всю колекцію (full collection scan) для пошуку документів.</li>
+            <li>MongoDB автоматично створює індекс для поля <code>_id</code>.</li>
+            <li>ви повинні створювати індекси для полів, за якими часто виконуєте пошук, фільтрацію або сортування.</li>
+        </ul>
+        <p><b>Створення індексу з <code>motor</code>:</b></p>
+        <pre class="language-python"><code># Створити унікальний індекс за полем 'email' у фоновому режимі
+await collection.create_index("email", unique=True, background=True)
+
+# Створити складений індекс (за кількома полями)
+# 1 — за зростанням, -1 — за спаданням
+await collection.create_index([("name", 1), ("age", -1)], background=True)
+</code></pre>
+        <p>Індекси створюються один раз, а потім використовуються базою даних автоматично.</p>
+        <hr>
+        <h2>Транзакції в MongoDB</h2>
+        <p>З версії 4.0 MongoDB підтримує <b>мультидокументні ACID-транзакції</b>, що дозволяє виконувати кілька операцій як єдину атомарну дію.</p>
+        <p><b>Коли це потрібно:</b></p>
+        <ul>
+            <li>коли вам потрібно гарантувати те, що або всі операції запису (в одну чи кілька колекцій) будуть успішними, або жодна з них не буде застосована.</li>
+            <li>приклад: банківський переказ (списання з одного рахунку та зарахування на інший).</li>
+        </ul>
+        <p><b>Використання з <code>motor</code>:</b><br>
+            Транзакції виконуються в межах сесії.</p>
+        <pre class="language-python"><code>async with await client.start_session() as session:
+    # Починаємо транзакцію
+    async with session.start_transaction():
+        try:
+            # Виконуємо операції всередині транзакції, передаючи сесію
+            await accounts_collection.update_one(
+                {"_id": account_a_id},
+                {"$inc": {"balance": -100}},
+                session=session
+            )
+            await accounts_collection.update_one(
+                {"_id": account_b_id},
+                {"$inc": {"balance": 100}},
+                session=session
+            )
+            # Якщо дійшли сюди без помилок, транзакція буде автоматично підтверджена (commit)
+        except Exception:
+            # Якщо сталася помилка, транзакція буде автоматично скасована (abort)
+            print("Транзакцію скасовано.")
+            raise
+</code></pre>
+        <p><b>Важливо!</b> Для використання транзакцій ваш сервер MongoDB має бути розгорнутий як <b>Replica Set</b>.</p>
+        <hr>
+        <h2>Приклад простого API (To-Do List)</h2>
+        <p>Об'єднаємо FastAPI, Pydantic та Motor для створення простого CRUD API.</p>
+        <p><b>Моделі Pydantic (<code>models.py</code>):</b></p>
+        <pre class="language-python"><code>from pydantic import BaseModel, Field
+from typing import Optional
+
+class Todo(BaseModel):
+    id: Optional[str] = Field(alias="_id", default=None) # Мапінг _id на id
+    title: str
+    description: Optional[str] = None
+    is_completed: bool = False
+
+class TodoUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    is_completed: Optional[bool] = None
+</code></pre>
+        <p><b>Ендпоінт створення (<code>routes.py</code>):</b></p>
+        <pre class="language-python"><code>from fastapi import APIRouter, Body, status
+from .models import Todo
+
+router = APIRouter()
+# Припускаємо, що 'todo_collection' імпортовано з database.py
+
+@router.post("/", response_model=Todo, status_code=status.HTTP_201_CREATED)
+async def create_todo(todo: Todo = Body(...)):
+    # Перетворюємо Pydantic модель на словник
+    new_todo = await todo_collection.insert_one(todo.model_dump(by_alias=True, exclude=["id"]))
+    created_todo = await todo_collection.find_one({"_id": new_todo.inserted_id})
+    return created_todo
+</code></pre>
+        <p><code>model_dump()</code> (в Pydantic v2) використовується для перетворення моделі на словник. <code>by_alias=True</code> гарантує, що поле <code>id</code> стане <code>_id</code>.</p>
+        <hr>
+        <h2>SQL JOIN vs MongoDB Embedding</h2>
+        <p>У SQL для отримання пов'язаних даних потрібні <code>JOIN</code>. У MongoDB часто всі необхідні дані зберігаються в одному вкладеному документі, що прискорює читання.</p>
+        <div class="mermaid">
+            graph LR
+            subgraph SQL JOIN
+            direction LR
+            U[Users] -- one-to-many --> O[Orders];
+            O -- many-to-many --> P[Products];
+            subgraph Запит
+            Q1("SELECT ... FROM Users JOIN Orders ... JOIN Products ...")
+            end
+            end
+            subgraph MongoDB Embedding
+            direction LR
+            DU[User Document] --> DO{"orders: [...]"};
+            subgraph "Вкладене замовлення"
+            DO --> DOP{"products: [...]"};
+            end
+            subgraph Запит
+            Q2("db.users.findOne({_id: ...})")
+            end
+            end
+        </div>
+        <hr>
+        <h2>Оптимізація запитів у MongoDB</h2>
+        <ul>
+            <li><b>Індекси:</b> <b>найважливіший</b> інструмент оптимізації. Створюйте індекси на всіх полях, за якими ви фільтруєте, сортуєте або шукаєте.</li>
+            <li><b>Денормалізація (Embedding):</b> зберігайте дані, які часто читаються разом, в одному документі, щоб уникнути додаткових запитів. Але не зловживайте, якщо дані часто оновлюються окремо.</li>
+            <li><p><b>Проєкція (Projection):</b> робіть запит лише на ті поля, які вам потрібні, а не на весь документ. Це зменшує навантаження на мережу та сервер.</p>
+                <pre class="language-python"><code># Повернути тільки поля 'name' та 'email', виключаючи '_id'
+await collection.find_one({"_id": user_id}, {"_id": 0, "name": 1, "email": 1})
+</code></pre>
+            </li>
+            <li><p><b>Використання <code>explain()</code>:</b> аналізуйте план виконання ваших запитів, щоб переконатися, що вони використовують індекси, а не сканують всю колекцію.</p>
+                <pre class="language-python"><code>explain_plan = await collection.find({"username": "alex"}).explain()
+# Вивчіть explain_plan['queryPlanner']['winningPlan']
+</code></pre>
+            </li>
+        </ul>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

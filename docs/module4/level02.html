@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 2: Створення асинхронного REST API з FastAPI</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 2: Створення асинхронного REST API з FastAPI</h1>
+        <p>Традиційні синхронні підходи до створення API можуть призвести до блокувань та низької продуктивності при великій кількості запитів. Ми освоїмо фундаментальні концепції асинхронного програмування в Python за допомогою <code>async</code> та <code>await</code> — ядра FastAPI, що дозволяє будувати неблокуючі та високопродуктивні системи.</p>
+        <p>Ви навчитеся створювати асинхронні ендпоінти, які ефективно обробляють паралельні запити. Детально розберемо роботу з динамічними параметрами шляху та запиту, а також методи обробки даних від клієнта через POST, PUT та DELETE-запити.</p>
+        <p>Особливу увагу буде приділено стратегіям ефективної обробки помилок та винятків з використанням <code>HTTPException</code>, що дозволить вашому API завжди надавати інформативні та передбачувані відповіді.</p>
+        <hr>
+        <h2>Асинхронність у Python: <code>async</code> та <code>await</code></h2>
+        <p>Асинхронне програмування дозволяє вашому застосунку виконувати довгі операції, <b>не блокуючи</b> основний потік виконання. Поки одне завдання чекає на відповідь, застосунок може обробляти інші запити.</p>
+        <p><b>Ключові слова:</b></p>
+        <ul>
+            <li><b><code>async def</code></b>: оголошує функцію як <i>корутину</i> (coroutine) — спеціальну асинхронну функцію, виконання якої можна призупинити.</li>
+            <li><b><code>await</code></b>: "каже" програмі призупинити виконання поточної корутини, доки асинхронна операція (яку ми "очікуємо") не завершиться. В цей час керування повертається до <i>event loop</i>, який може запустити інші завдання.</li>
+        </ul>
+        <p><b>Простий приклад:</b></p>
+        <pre class="language-python"><code>import asyncio
+
+# Оголошуємо асинхронну функцію
+async def fetch_data():
+    print("Починаємо завантаження даних...")
+    # Призупиняємо виконання на 2 секунди, імітуючи мережевий запит
+    await asyncio.sleep(2)
+    print("Завантаження даних завершено.")
+    return {"data": "Деяка інформація"}
+
+async def main():
+    print("Виконуємо головну функцію.")
+    result = await fetch_data() # Очікуємо на результат
+    print(f"Результат: {result}")
+
+# Запускаємо асинхронний код
+asyncio.run(main())
+</code></pre>
+        <hr>
+        <h2>Цикл подій та <code>asyncio.gather</code></h2>
+        <p><b>Event Loop</b> — це ядро асинхронного застосунку. Його можна уявити як "диригента", який керує виконанням багатьох асинхронних завдань. Він запускає завдання, і якщо воно доходить до <code>await</code>, цикл подій призупиняє його та перемикається на інше, готове до виконання завдання.</p>
+        <p><b><code>asyncio.gather</code></b> — це функція, яка дозволяє запускати декілька асинхронних завдань <i>конкурентно</i> (майже одночасно) і чекати на їх завершення.</p>
+        <pre class="language-python"><code>import asyncio
+import time
+
+async def task(name: str, delay: int):
+    print(f"Завдання '{name}': старт, чекаємо {delay} сек.")
+    await asyncio.sleep(delay)
+    print(f"Завдання '{name}': кінець")
+
+async def main():
+    start_time = time.time()
+    # Запускаємо обидва завдання конкурентно
+    await asyncio.gather(
+        task("A", 2),
+        task("B", 1)
+    )
+    print(f"Всі завдання завершено за {time.time() - start_time:.2f} сек.")
+# Виведення:
+# Завдання 'A': старт, чекаємо 2 сек.
+# Завдання 'B': старт, чекаємо 1 сек.
+# Завдання 'B': кінець
+# Завдання 'A': кінець
+# Всі завдання завершено за 2.00 сек. (не 1+2=3 сек!)
+</code></pre>
+        <p>FastAPI використовує <code>asyncio</code> та <code>event loop</code> "під капотом" для ефективної обробки тисяч одночасних запитів.</p>
+        <hr>
+        <h2>Асинхронні ендпоінти у FastAPI</h2>
+        <p>FastAPI початково спроєктований для роботи з асинхронними функціями. Ви можете оголосити ваші функції-обробники (ендпоінти) за допомогою <code>async def</code>.</p>
+        <p>Коли FastAPI отримує запит на такий ендпоінт, він запускає вашу корутину у своєму циклі подій. Якщо всередині вашої функції зустрічається <code>await</code> (наприклад, під час запиту до БД або зовнішнього API), FastAPI "відпускає" воркер для обробки інших вхідних запитів, а не чекає на завершення операції.</p>
+        <p><b>Приклад:</b></p>
+        <pre class="language-python"><code>import asyncio
+from fastapi import FastAPI
+
+app = FastAPI()
+
+# Цей ендпоінт не блокуватиме сервер на 5 секунд.
+# Сервер зможе обробляти інші запити, поки цей "спить".
+@app.get("/long-task")
+async def long_task():
+    await asyncio.sleep(5)
+    return {"message": "Готово! Я почекав 5 секунд, не блокуючи інші запити."}
+
+@app.get("/short-task")
+async def short_task():
+    return {"message": "Я виконався швидко!"}
+</code></pre>
+        <p>Ця діаграма ілюструє ключову перевагу <code>async def</code> в ендпоінтах FastAPI. Замість того, щоб блокуватися на довгій операції, воркер негайно звільняється для обробки інших запитів.</p>
+        <div class="mermaid">
+            sequenceDiagram
+            participant ClientA as Клієнт А
+            participant ClientB as Клієнт Б
+            participant Worker as FastAPI Воркер
+            participant External as Зовнішній ресурс (БД/API)
+
+            ClientA->>Worker: GET /long-task
+            activate Worker
+            Note right of Worker: Починаємо обробку Запиту А
+            Worker->>External: await db.query()
+            Note right of Worker: Воркер "відпускає" завдання і є вільним!
+
+            ClientB->>Worker: GET /short-task
+            Note right of Worker: Воркер негайно<br/>починає обробку Запиту Б
+            Worker-->>ClientB: Відповідь на Запит Б
+
+            External-->>Worker: Результат від БД для Запиту А готовий
+            Note right of Worker: Воркер відновлює<br/>обробку Запиту А
+            Worker-->>ClientA: Відповідь на Запит А
+            deactivate Worker
+        </div>
+
+        <hr>
+        <h2>Path Parameters</h2>
+        <p><b>Path Parameters (параметри шляху)</b> дозволяють створювати динамічні URL, де частина шляху є змінною. Вони визначаються в URL за допомогою фігурних дужок <code>{}</code> і передаються у функцію як іменовані аргументи.</p>
+        <p>FastAPI використовує анотації типів для автоматичної валідації та перетворення цих параметрів.</p>
+        <p><b>Приклад:</b></p>
+        <pre class="language-python"><code>from fastapi import FastAPI
+
+app = FastAPI()
+
+# {item_id} - це Path Parameter
+@app.get("/items/{item_id}")
+async def read_item(item_id: int): # FastAPI перевірить, що item_id — це число
+    return {"item_id": item_id}
+
+@app.get("/users/{username}")
+async def get_user(username: str): # Тут параметр буде рядком
+    return {"username": username}
+
+@app.get("/files/{file_path:path}")
+async def read_file(file_path: str): # Тип :path дозволяє читати шляхи зі слешами
+    # Запит /files/home/user/report.txt -> file_path = "home/user/report.txt"
+    return {"file_path": file_path}
+</code></pre>
+        <p>Якщо тип даних в URL не відповідає анотації (наприклад, <code>/items/abc</code> замість числа), FastAPI автоматично поверне клієнту помилку <code>422 Unprocessable Entity</code>.</p>
+        <hr>
+        <h2>Query Parameters</h2>
+        <p><b>Query Parameters (параметри запиту)</b> — це пари <code>ключ=значення</code> в URL після <code>?</code>, що використовуються для фільтрації, сортування та пагінації. Вони визначаються як аргументи функції, які <i>не є</i> параметрами шляху.</p>
+        <pre class="language-python"><code>from fastapi import FastAPI, Query
+from typing import Optional, List
+
+app = FastAPI()
+
+# URL: /products/?category=phones&max_price=500.00
+@app.get("/products")
+async def get_products(
+    category: str, # Обов'язковий query-параметр
+    max_price: Optional[float] = None, # Опціональний
+    tags: List[str] = Query(None) # Список: ?tags=sale&tags=new
+):
+    response = {"category": category}
+    if max_price:
+        response.update({"max_price": max_price})
+    if tags:
+        response.update({"tags": tags})
+
+    # ... тут логіка фільтрації товарів за параметрами ...
+    return response
+</code></pre>
+        <p>Як і в Рівні 1, ви можете використовувати <code>Query()</code> для додавання валідації (<code>min_length</code>, <code>max_length</code>, <code>gt</code>, <code>le</code>, <code>regex</code>) та метаданих для документації.</p>
+        <hr>
+        <h2>POST-запити та валідація з Pydantic</h2>
+        <p><b>POST-запити</b> використовуються для надсилання даних від клієнта на сервер з метою створення нового ресурсу. Дані передаються в <b>тілі запиту (request body)</b>, зазвичай у форматі JSON.</p>
+        <p>FastAPI використовує бібліотеку <b>Pydantic</b> для визначення структури, валідації та парсингу даних з тіла запиту.</p>
+        <p><b>Процес:</b></p>
+        <ol>
+            <li>Визначте Pydantic-модель, що описує очікувану структуру даних.</li>
+            <li>Вкажіть цю модель як анотацію типу для аргумента функції ендпоінта.</li>
+            <li>FastAPI автоматично:
+                <ul>
+                    <li>Прочитає тіло запиту.</li>
+                    <li>Перетворить JSON на об'єкт вашої Pydantic-моделі.</li>
+                    <li><b>Провалідує</b> дані. Якщо вони не відповідають моделі (неправильний тип, відсутні обов'язкові поля), поверне помилку <code>422</code>.</li>
+                    <li>Передасть валідний об'єкт моделі до вашої функції.</li>
+                </ul>
+            </li>
+        </ol>
+        <p><b>Приклад:</b></p>
+        <pre class="language-python"><code>from fastapi import FastAPI
+from pydantic import BaseModel, Field
+
+app = FastAPI()
+
+# 1. Pydantic-модель для валідації
+class Item(BaseModel):
+    name: str = Field(min_length=3, max_length=50)
+    price: float = Field(gt=0, description="Ціна має бути більшою за нуль")
+    is_offer: bool = False
+
+# 2. Ендпоінт з анотацією типу
+@app.post("/items/")
+async def create_item(item: Item): # FastAPI валідує тіло запиту за моделлю Item
+    # item — це екземпляр Pydantic-моделі Item
+    print(f"Створено товар: {item.name}, ціна: {item.price}")
+    return {"message": "Товар успішно створено!", "item_data": item.dict()}
+</code></pre>
+        <hr>
+        <h2>PUT-запити: оновлення даних</h2>
+        <p><b>PUT-запити</b> використовуються для <i>повного</i> оновлення існуючого ресурсу. Клієнт повинен передати всі поля ресурсу, навіть ті, що не змінюються.</p>
+        <p>Логіка дуже схожа на POST: ми використовуємо Path Parameter для ідентифікації ресурсу і Pydantic-модель для валідації даних у тілі запиту.</p>
+        <pre class="language-python"><code>from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI()
+# Імітація бази даних
+items_db = {1: {"name": "Яблуко", "price": 10.5}}
+
+class ItemUpdate(BaseModel):
+    name: str
+    price: float
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item_update: ItemUpdate):
+    if item_id not in items_db:
+        raise HTTPException(status_code=404, detail="Товар не знайдено")
+
+    # Оновлюємо дані в нашій "базі"
+    items_db[item_id] = item_update.dict()
+    return {"message": "Товар успішно оновлено", "item": items_db[item_id]}
+</code></pre>
+        <div class="lesson-note lesson-note--info">
+            <div class="lesson-note__container">
+                <div class="lesson-note__head">Примітка</div>
+                <div class="lesson-note__content">
+                    <p>Для <i>часткового</i> оновлення (коли клієнт передає лише змінені поля) зазвичай використовується метод <b>PATCH</b>.</p>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <h2>DELETE-запити</h2>
+        <p><b>DELETE-запити</b> використовуються для видалення ресурсу за його ідентифікатором. Зазвичай вони не мають тіла запиту.</p>
+        <pre class="language-python"><code>from fastapi import FastAPI, HTTPException
+
+app = FastAPI()
+# Імітація бази даних
+items_db = {
+    1: {"name": "Яблуко", "price": 10.5},
+    2: {"name": "Банан", "price": 15.0},
+}
+
+@app.delete("/items/{item_id}")
+async def delete_item(item_id: int):
+    if item_id not in items_db:
+        # Використовуємо HTTPException для повернення коректної помилки
+        raise HTTPException(status_code=404, detail="Товар не знайдено")
+
+    deleted_item = items_db.pop(item_id)
+    return {"message": f"Товар '{deleted_item['name']}' успішно видалено"}
+</code></pre>
+        <p>Після успішного видалення часто повертають статус-код <code>204 No Content</code> (без тіла відповіді) або <code>200 OK</code> з повідомленням.</p>
+        <hr>
+        <h2>Обробка помилок та винятків</h2>
+        <p>Для повернення HTTP-помилок з ендпоінтів слід використовувати <b><code>HTTPException</code></b>.</p>
+        <p><b>Імпорт:</b> <code>from fastapi import HTTPException</code></p>
+        <p><b>Використання:</b> <code>raise HTTPException(status_code=..., detail=...)</code></p>
+        <ul>
+            <li><code>status_code</code>: код стану HTTP (наприклад, <code>404</code>, <code>400</code>, <code>403</code>).</li>
+            <li><code>detail</code>: повідомлення про помилку, яке надішлеться клієнту в JSON-відповіді.</li>
+            <li><code>headers</code>: опціональний словник з додатковими заголовками.</li>
+        </ul>
+        <p>FastAPI перехопить цей виняток і сформує коректну HTTP-відповідь із зазначеним кодом і тілом.</p>
+        <p><b>Приклад:</b></p>
+        <pre class="language-python"><code>from fastapi import FastAPI, HTTPException
+
+users_db = {1: "Alice", 2: "Bob"}
+
+@app.get("/users/{user_id}")
+async def get_user_by_id(user_id: int):
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail=f"Користувача з ID {user_id} не знайдено")
+
+    if user_id == 1: # Приклад перевірки прав
+        raise HTTPException(status_code=403, detail="Доступ до цього користувача заборонено")
+
+    return {"username": users_db[user_id]}
+</code></pre>
+        <p>Використання <code>HTTPException</code> — стандартний і правильний спосіб обробки очікуваних помилок в API.</p>
+        <hr>
+        <h2>CRUD API: повний приклад</h2>
+        <p>Об'єднаємо всі операції для простого ресурсу "Книга".</p>
+        <p><b>Модель Pydantic:</b></p>
+        <pre class="language-python"><code>from pydantic import BaseModel
+
+class Book(BaseModel):
+    id: int
+    title: str
+    author: str
+</code></pre>
+        <p><b>Ендпоінти:</b></p>
+        <pre class="language-python"><code>from fastapi import FastAPI, HTTPException
+from typing import List
+
+app = FastAPI()
+books_db = [] # Імітація БД
+
+# CREATE
+@app.post("/books/", response_model=Book, status_code=201)
+async def create_book(book: Book):
+    books_db.append(book)
+    return book
+
+# READ (List)
+@app.get("/books/", response_model=List[Book])
+async def get_books():
+    return books_db
+
+# READ (Detail)
+@app.get("/books/{book_id}", response_model=Book)
+async def get_book(book_id: int):
+    for book in books_db:
+        if book.id == book_id:
+            return book
+    raise HTTPException(status_code=404, detail="Книгу не знайдено")
+
+# UPDATE
+@app.put("/books/{book_id}", response_model=Book)
+async def update_book(book_id: int, book_update: Book):
+    # ... (логіка пошуку та оновлення) ...
+    return book_update
+
+# DELETE
+@app.delete("/books/{book_id}")
+async def delete_book(book_id: int):
+    # ... (логіка пошуку та видалення) ...
+    return {"message": "Книгу видалено"}
+</code></pre>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

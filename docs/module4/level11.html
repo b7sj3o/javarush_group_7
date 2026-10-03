@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 11: Транзакції, зв'язки та оптимізація в SQLAlchemy</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 11: Транзакції, зв'язки та оптимізація в SQLAlchemy</h1>
+        <p>Взаємодія з базою даних через ORM відкриває безліч можливостей, але також ставить питання забезпечення цілісності даних, ефективної роботи зі зв'язками та оптимізації продуктивності. Ми поглибимо наші знання про SQLAlchemy, сфокусувавшись на <b>транзакціях</b> — фундаментальній концепції, що гарантує атомарність операцій та дотримання властивостей ACID.</p>
+        <p>Ви навчитеся керувати транзакціями в асинхронному SQLAlchemy за допомогою контекстних менеджерів. Ми повторимо різні типи зв'язків між таблицями та освоїмо методи <b><code>selectinload</code></b> і <b><code>joinedload</code></b> для вирішення наболілої проблеми N+1 запитів.</p>
+        <p>Також розглянемо агрегації, підзапити, методи потокової обробки великих обсягів даних та інструменти для профілювання SQL-запитів, щоб ваш API працював максимально ефективно.</p>
+        <hr>
+        <h2>Що таке транзакція і навіщо вона потрібна?</h2>
+        <p><b>Транзакція</b> — це послідовність операцій з базою даних, яка виконується як <b>єдине ціле</b>. Це фундаментальна концепція для забезпечення цілісності даних.</p>
+        <p><b>Принцип "все або нічого":</b></p>
+        <ul>
+            <li>Якщо всі операції всередині транзакції завершуються успішно, їхні результати <b>фіксуються (commit)</b> і стають постійними.</li>
+            <li>Якщо хоча б одна операція завершується збоєм, усі попередні зміни в межах цієї транзакції <b>відкочуються (rollback)</b>, ніби нічого й не відбувалося.</li>
+        </ul>
+        <img data-max-width="800" data-id="5f8a08b1-7ef8-4589-ac31-0d9eb8dc4c82" src="https://cdn.javarush.com/images/article/5f8a08b1-7ef8-4589-ac31-0d9eb8dc4c82/800.jpeg" alt="">
+        <p><b>Приклад із життя:</b> банківський переказ. Списання грошей з одного рахунку та зарахування на інший мають відбутися разом. Якщо списання вдалося, а зарахування — ні, всю операцію має бути скасовано.</p>
+        <hr>
+        <h2>Властивості ACID</h2>
+        <p>Надійні транзакційні системи мають властивості <b>ACID</b>:</p>
+        <ul>
+            <li><b>Atomicity (Атомарність):</b> транзакція є атомарною — вона або виконується повністю, або не виконується взагалі. Немає проміжних станів.</li>
+            <li><b>Consistency (Консистентність):</b> транзакція переводить базу даних з одного узгодженого стану в інший. Усі правила та обмеження (constraints) бази даних дотримуються.</li>
+            <li><b>Isolation (Ізольованість):</b> паралельні транзакції не повинні заважати одна одній. Результати однієї транзакції невидимі для інших, поки вона не буде зафіксована.</li>
+            <li><b>Durability (Довговічність):</b> після успішного завершення (commit) транзакції її результати зберігаються назавжди, навіть у разі збою системи (наприклад, відключення живлення).</li>
+        </ul>
+        <img data-max-width="1024" data-id="b4e78b2d-b85e-4781-ae2f-b7f57ca8150a" src="https://cdn.javarush.com/images/article/b4e78b2d-b85e-4781-ae2f-b7f57ca8150a/1024.jpeg" alt="ACID">
+        <hr>
+        <h2>Транзакції в асинхронному SQLAlchemy</h2>
+        <p>В асинхронному SQLAlchemy керування транзакціями зазвичай відбувається за допомогою контекстного менеджера <code>async with session.begin():</code>.</p>
+        <p><b>Явне керування (менш бажаний спосіб):</b></p>
+        <pre class="language-python"><code>await session.begin()
+try:
+    # ... операції з session.add(), await session.execute() ...
+    await session.commit()
+except Exception:
+    await session.rollback()
+    raise
+</code></pre>
+        <p><b>Контекстний менеджер (рекомендований спосіб):</b><br>
+            <code>async with session.begin():</code> автоматично починає транзакцію. Якщо блок коду завершується без винятків, транзакція <b>автоматично комітиться</b>. Якщо виникає виняток, транзакція <b>автоматично відкочується</b>.</p>
+        <pre class="language-python"><code># session отримана із залежності Depends(get_async_session)
+try:
+    async with session.begin():
+        # ... операції з session.add(), await session.execute() ...
+        # commit буде викликаний автоматично під час виходу з блоку
+    return {"status": "success"}
+except SQLAlchemyError:
+    # rollback буде викликаний автоматично у разі виникнення винятку
+    raise HTTPException(status_code=500, detail="Database error")
+</code></pre>
+        <hr>
+        <h2>Транзакції для пов'язаних операцій</h2>
+        <p>Використовуйте одну транзакцію для виконання кількох залежних дій.</p>
+        <p><b>Приклад: створення замовлення та зменшення залишку товару</b></p>
+        <pre class="language-python"><code>from sqlalchemy.exc import SQLAlchemyError
+
+async def create_order(
+    item_id: int, quantity: int, session: AsyncSession = Depends(get_async_session)
+):
+    try:
+        async with session.begin(): # Починаємо транзакцію
+            # Отримуємо товар із блокуванням для оновлення (FOR UPDATE)
+            item_stmt = select(Item).where(Item.id == item_id).with_for_update()
+            item = (await session.execute(item_stmt)).scalar_one()
+
+            if item.stock < quantity:
+                raise ValueError("Недостатньо товару на складі")
+
+            # Зменшуємо залишок
+            item.stock -= quantity
+
+            # Створюємо замовлення
+            new_order = Order(item_id=item_id, quantity=quantity)
+            session.add(new_order)
+
+            # session.commit() викличеться автоматично
+    except ValueError as e:
+        # session.rollback() викличеться автоматично
+        raise HTTPException(status_code=400, detail=str(e))
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="Помилка бази даних")
+</code></pre>
+        <hr>
+        <h2>Зв'язки між таблицями</h2>
+        <p>Нагадаємо, як визначаються зв'язки в SQLAlchemy з використанням <code>relationship</code>.</p>
+
+        <p><b>One-to-One (<code>uselist=False</code>):</b></p>
+        <pre class="language-python"><code># В моделі User
+profile: Mapped["Profile"] = relationship(back_populates="user", uselist=False)
+# В моделі Profile
+user: Mapped["User"] = relationship(back_populates="profile")
+user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+</code></pre>
+        <p><b>Foreign Key (One-to-Many):</b></p>
+        <pre class="language-python"><code># В моделі Author (сторона "один")
+books: Mapped[List["Book"]] = relationship(back_populates="author")
+# В моделі Book (сторона "багато")
+author_id: Mapped[int] = mapped_column(ForeignKey('authors.id'))
+author: Mapped["Author"] = relationship(back_populates="books")
+</code></pre>
+        <p><b>Many-to-Many (<code>secondary</code>):</b></p>
+        <pre class="language-python"><code># В моделі Post
+tags: Mapped[List["Tag"]] = relationship(secondary=post_tag_association, ...)
+# В моделі Tag
+posts: Mapped[List["Post"]] = relationship(secondary=post_tag_association, ...)
+</code></pre>
+        <hr>
+        <h2>Оптимізація запитів: <code>selectinload</code> та <code>joinedload</code></h2>
+        <p>Проблема <b>N+1 запитів</b> так само актуальна для SQLAlchemy, як і для Django ORM.</p>
+        <ul>
+            <li><b>Lazy Loading (ліниве завантаження):</b> за замовчуванням, пов'язані об'єкти завантажуються лише в момент першого звернення до них. Це зручно, але в циклах призводить до N+1 запитів.</li>
+            <li><b>Eager Loading ("жадібне" завантаження):</b> дозволяє завантажити пов'язані дані заздалегідь, в одному або кількох запитах.</li>
+        </ul>
+        <p><b>Інструменти Eager Loading:</b></p>
+        <ul>
+            <li><p><b><code>joinedload()</code>:</b></p>
+                <ul>
+                    <li>використовує <code>LEFT OUTER JOIN</code> для завантаження пов'язаних об'єктів в <b>одному</b> SQL-запиті.</li>
+                    <li>ідеально для зв'язків <i>-to-one</i> (<code>ForeignKey</code>, <code>OneToOneField</code>).</li>
+                    <li>може бути неефективним для зв'язків <i>-to-many</i> через дублювання даних основного об'єкта.</li>
+                </ul>
+            </li>
+            <li><p><b><code>selectinload()</code>:</b></p>
+                <ul>
+                    <li>виконує <b>другий</b> SQL-запит (<code>SELECT ... WHERE id IN (...)</code>) для завантаження пов'язаних об'єктів.</li>
+                    <li>ідеально для зв'язків <i>-to-many</i> (<code>ManyToManyField</code>, зворотний <code>ForeignKey</code>).</li>
+                </ul>
+            </li>
+        </ul>
+        <p><b>Приклад:</b></p>
+        <pre class="language-python"><code>from sqlalchemy.orm import selectinload, joinedload
+
+# Завантажити пости, їхніх авторів (JOIN) та теги (другий запит)
+statement = (
+    select(Post)
+    .options(
+        joinedload(Post.author),     # Для ForeignKey
+        selectinload(Post.tags)      # Для ManyToMany
+    )
+)
+result = await session.execute(statement)
+posts = result.scalars().unique().all()
+
+# Тепер доступ до post.author та post.tags не викличе додаткових запитів у циклі
+for post in posts:
+    print(post.author.name)
+    for tag in post.tags:
+        print(tag.name)
+</code></pre>
+        <hr>
+        <h2>Агрегації та підзапити</h2>
+        <ul>
+            <li><b>Агрегація:</b> обчислення підсумкових значень (<code>COUNT</code>, <code>AVG</code>, <code>SUM</code>). Використовується <code>sqlalchemy.func</code>.</li>
+            <li><b>Підзапит:</b> вкладений запит, результат якого використовується в основному запиті.</li>
+        </ul>
+        <p><b>Приклад агрегації:</b></p>
+        <pre class="language-python"><code>from sqlalchemy import func, select
+
+# Порахувати кількість користувачів
+count_statement = select(func.count(User.id))
+user_count = (await session.execute(count_statement)).scalar_one() # .scalar_one() для одного значення
+
+# Знайти середній вік
+avg_age_statement = select(func.avg(User.age))
+avg_age = (await session.execute(avg_age_statement)).scalar_one()
+</code></pre>
+        <p><b>Приклад підзапиту:</b></p>
+        <pre class="language-python"><code># Знайти всіх користувачів, чий вік вищий за середній
+
+# 1. Створюємо підзапит для обчислення середнього віку
+subquery = select(func.avg(User.age)).scalar_subquery()
+
+# 2. Використовуємо його в основному запиті
+main_query = select(User).where(User.age > subquery)
+
+result = await session.execute(main_query)
+users_above_average_age = result.scalars().all()
+</code></pre>
+        <hr>
+        <h2>Робота з великими обсягами даних</h2>
+        <p>Обробка тисяч або мільйонів рядків вимагає спеціальних підходів, щоб не вичерпати оперативну пам'ять.</p>
+        <p><b>Потокова обробка (Streaming / Chunking):</b><br>
+            Замість завантаження всіх результатів одразу (<code>.all()</code>) обробляйте їх частинами (<code>.stream()</code> або <code>.partitions()</code>).</p>
+        <pre class="language-python"><code>from sqlalchemy import select
+
+statement = select(HugeTable)
+# .stream() повертає асинхронний ітератор
+async for row in await session.stream(statement):
+    # Обробляємо один рядок (row) за раз
+    # Споживання пам'яті мінімальне
+    process_row(row)
+
+# Обробка "пачками" (chunks) по 1000 рядків
+result = await session.execute(statement)
+for partition in result.partitions(1000):
+    process_batch(partition) # partition — це список з 1000 рядків
+</code></pre>
+        <p><b>Асинхронність</b> та <b>паралелізм</b> (наприклад, з <code>asyncio.gather</code>) також можуть значно прискорити обробку.</p>
+        <hr>
+        <h2>Тестування та профілювання SQL-запитів</h2>
+        <p>Щоб переконатися, що ваші запити є ефективними, їх потрібно аналізувати.</p>
+        <p><b>1. Логування запитів у SQLAlchemy:</b><br>
+            Увімкніть <code>echo=True</code> при створенні `engine`, щоб виводити всі згенеровані SQL-запити в консолі.</p>
+        <pre class="language-python"><code>engine = create_async_engine(DATABASE_URL, echo=True)
+</code></pre>
+        <p><b>2. Аналіз плану виконання (<code>EXPLAIN ANALYZE</code>):</b><br>
+            Це команда самої СУБД (наприклад, PostgreSQL), яка показує, як саме база даних виконує ваш запит: які індекси використовує, які типи сканування таблиць тощо.</p>
+        <pre><code class="language-sql"># У psql або іншому клієнті БД
+EXPLAIN ANALYZE SELECT * FROM users WHERE email = 'test@example.com';
+</code></pre>
+        <p>Якщо ви бачите <code>Seq Scan</code> (послідовне сканування) на великій таблиці, це явна ознака відсутності потрібного індексу.</p>
+        <p><b>3. Інструменти для FastAPI:</b></p>
+        <ul>
+            <li><b><code>django-debug-toolbar</code></b> тут не підходить, оскільки це інструмент для Django.</li>
+            <li><b>Сторонні Middleware:</b> можна використовувати middleware, що вимірюють час виконання запитів та логують їх (наприклад, <code>fastapi-sqlalchemy-profiler</code>).</li>
+        </ul>
+        <hr>
+        <h2>Практичні поради з оптимізації</h2>
+        <p><b>Індекси:</b> додавайте індекси (<code>index=True</code>) на поля, що використовуються в <code>WHERE</code>, <code>JOIN</code> та <code>ORDER BY</code>. Не створюйте зайвих індексів, оскільки вони уповільнюють операції запису (INSERT, UPDATE, DELETE).</p>
+        <p><b>Eager loading:</b> завжди використовуйте <code>selectinload</code> та <code>joinedload</code> в ендпоінтах, які повертають списки пов'язаних даних, щоб уникнути проблеми N+1.</p>
+        <p><b>Короткі транзакції:</b> тримайте блоки транзакцій (<code>async with session.begin():</code>) якомога коротшими та швидшими. Не виконуйте в них повільних операцій, як-от зовнішні API-виклики.</p>
+        <p><b>Профілюйте:</b> не оптимізуйте наосліп. Використовуйте логування та <code>EXPLAIN ANALYZE</code> для пошуку реальних "вузьких місць" у продуктивності.</p>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

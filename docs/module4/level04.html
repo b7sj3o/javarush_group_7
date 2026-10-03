@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 4: Аутентифікація та авторизація з OAuth2 і JWT</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 4: Аутентифікація та авторизація з OAuth2 і JWT</h1>
+        <p>Реалізація надійної автентифікації та авторизації з нуля — одна з найскладніших та потенційно вразливих частин будь-якого API. Ми заглибимося в сучасні стандарти <b>OAuth2</b> та <b>JWT</b>, які пропонують перевірені рішення для цього завдання.</p>
+        <p>Ви дізнаєтеся, чому використання пари Access Token та Refresh Token підвищує безпеку, і як самодостатня природа JWT спрощує перевірку справжності запитів. Ми налаштуємо <code>OAuth2PasswordBearer</code> у FastAPI для автоматичного вилучення токенів, навчимося генерувати та перевіряти JWT за допомогою бібліотеки <code>python-jose</code>.</p>
+        <p>Буде розглянуто, як захищати ендпоінти та керувати доступом на основі ролей, що дозволить вам створювати надійні та stateless API.</p>
+        <hr>
+        <h2>Access Token та Refresh Token</h2>
+        <p><b>OAuth2</b> — це відкритий стандарт авторизації, який дозволяє застосункам отримувати обмежений доступ до акаунтів користувачів на інших сервісах (наприклад, «Увійти через Google»), при цьому без отримання паролю користувача. Багато концепцій OAuth2, особливо використання токенів, лягли в основу сучасних систем аутентифікації в API.</p>
+        <p>У сучасних stateless API, включно з тими, що розроблені за принципами OAuth2, аутентифікація майже завжди базується на <b>токенах</b>.</p>
+        <p><b>Access Token:</b></p>
+        <img data-max-width="512" data-id="0894087f-538b-4e41-9937-6b9519cf56c3" src="https://cdn.javarush.com/images/article/0894087f-538b-4e41-9937-6b9519cf56c3/512.jpeg" alt="">
+        <ul>
+            <li>це ключ, який клієнт (наприклад, фронтенд) пред'являє API під час кожного запиту для підтвердження своєї особистості та прав.</li>
+            <li><b>короткотривалий:</b> зазвичай термін його дії становить від 5 до 60 хвилин.</li>
+            <li>передається в HTTP-заголовку <code>Authorization</code>.</li>
+            <li><b>формат:</b> <code>Authorization: Bearer &lt;access_token&gt;</code></li>
+        </ul>
+
+        <p><b>Refresh Token:</b></p>
+        <img data-max-width="512" data-id="b21cfb0b-b1f4-4175-9e65-c05eda58b0fb" src="https://cdn.javarush.com/images/article/b21cfb0b-b1f4-4175-9e65-c05eda58b0fb/512.jpeg" alt="">
+        <ul>
+            <li>це спеціальний ключ, єдине завдання якого — отримати <b>новий</b> Access Token, коли в старого минув термін придатності.</li>
+            <li><b>довготривалий:</b> може діяти дні, тижні або місяці.</li>
+            <li>зберігається клієнтом більш безпечно і використовується рідко.</li>
+        </ul>
+        <p><b>Навіщо два токени?</b> Це підвищує безпеку. Якщо Access Token буде перехоплено, він швидко стане недійсним. Компрометація Refresh Token — більш рідкісна та серйозна подія, яку легше відстежити та заблокувати.</p>
+        <hr>
+        <h2>JSON Web Tokens</h2>
+        <p><b>JWT (JSON Web Token)</b> — це відкритий стандарт (RFC 7519) для створення компактних та самодостатніх токенів. Це не просто випадковий рядок, а закодований JSON-об'єкт.</p>
+        <p><b>Структура JWT (<code>header.payload.signature</code>):</b></p>
+        <ol>
+            <li><b>Header:</b> метадані — тип токена (<code>typ</code>: "JWT") та алгоритм підпису (<code>alg</code>: "HS256").</li>
+            <li><b>Payload:</b> дані (заяви, claims) про користувача (наприклад, <code>user_id</code>, <code>username</code>, <code>role</code>) та метадані токена (наприклад, <code>exp</code> — час завершення терміну дії).</li>
+            <li><b>Signature:</b> створюється шляхом підпису <code>header</code> та <code>payload</code> з використанням секретного ключа, відомого лише серверу.</li>
+        </ol>
+        <div class="mermaid">
+            graph TD
+            A[JWT Токен] --> B(Header);
+            A --> C(Payload);
+            A --> D(Signature);
+            B -- Містить --> B1("alg: HS256");
+            B -- Містить --> B2("typ: JWT");
+            C -- Містить --> C1("sub: username");
+            C -- Містить --> C2("exp: 1678886400");
+            C -- Містить --> C3("role: admin");
+            D -- Створюється з --> H((Header + '.' + Payload));
+            D -- Підписується --> S[Секретний ключ];
+
+            style D fill:#cfc,stroke:#333;
+        </div>
+        <p>Підпис створюється з Header та Payload із використанням секретного ключа. Будь-яка зміна в <code>header</code> або <code>payload</code> зробить підпис невалідним.</p>
+        <hr>
+        <h2>Налаштування аутентифікації у FastAPI</h2>
+        <p>FastAPI надає гнучкі інструменти для інтеграції схем безпеки, таких як OAuth2 з JWT.</p>
+        <p><b>Основний інструмент:</b> <code>OAuth2PasswordBearer</code>.</p>
+        <ul>
+            <li><b>імпорт:</b> <code>from fastapi.security import OAuth2PasswordBearer</code>.</li>
+            <li><b>призначення:</b> це клас-залежність, який "знає", як знайти токен у вхідному запиті. Він шукає заголовок <code>Authorization</code> і витягує з нього токен (значення після <code>Bearer </code>).</li>
+            <li><b>використання:</b> створюється екземпляр, якому передається URL ендпоінта для отримання токена. Це використовується для автоматичної документації (Swagger UI).</li>
+        </ul>
+        <pre class="language-python"><code># main.py або auth.py
+from fastapi import Depends, FastAPI
+from fastapi.security import OAuth2PasswordBearer
+
+app = FastAPI()
+
+# Створюємо екземпляр схеми. 'token' — це URL, де клієнт може отримати токен.
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Захищений ендпоінт
+@app.get("/users/me")
+async def read_users_me(token: str = Depends(oauth2_scheme)):
+    # У змінній 'token' буде вміст токена, який витягнуто із заголовка.
+    # Далі ми будемо його перевіряти.
+    return {"token": token}
+</code></pre>
+        <p>Тепер Swagger UI для ендпоінта <code>/users/me</code> матиме кнопку "Authorize", що дозволяє вставити токен для тестування.</p>
+        <hr>
+        <h2>Генерація та перевірка JWT-токенів</h2>
+        <p><i>Примітка: замість ручної роботи з JWT на практиці часто використовують перевірені бібліотеки, такі як <code>python-jose</code> (рекомендована FastAPI) або <code>PyJWT</code>.</i></p>
+        <p><b>Встановлення <code>python-jose</code>:</b></p>
+        <pre><code class="language-bash">pip install "python-jose[cryptography]"
+</code></pre>
+        <p><b>Логіка створення та перевірки:</b></p>
+        <pre class="language-python"><code># auth.py
+from jose import JWTError, jwt
+from datetime import datetime, timedelta, timezone
+from pydantic import BaseModel
+
+# --- Налаштування ---
+SECRET_KEY = "a_very_secret_key_should_be_in_env_variables" # Зберігати в .env!
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# --- Функції ---
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def decode_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        return None # Або згенерувати виняток
+</code></pre>
+        <ul>
+            <li><code>create_access_token</code>: приймає словник з даними (наприклад, <code>{'sub': username}</code>), додає час життя (<code>exp</code>) та створює підписаний JWT.</li>
+            <li><code>decode_token</code>: приймає токен, перевіряє його підпис та термін дії. Якщо все гаразд, повертає <code>payload</code>.</li>
+        </ul>
+        <hr>
+        <h2>Захист ендпоінтів через JWT</h2>
+        <p>Тепер об'єднаємо <code>OAuth2PasswordBearer</code> та логіку роботи з JWT для створення залежності, яка захищатиме ендпоінти та повертатиме поточного користувача.</p>
+        <p><b>Приклад (<code>auth.py</code>):</b></p>
+        <pre class="language-python"><code>from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+# ... (імпорти та функції create/decode_token з минулого слайда) ...
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    payload = decode_token(token)
+    if payload is None:
+        raise credentials_exception
+    username: str = payload.get("sub")
+    if username is None:
+        raise credentials_exception
+    # Тут можна додати запит до БД для отримання об'єкта User за username
+    # user = get_user_from_db(username=username)
+    # if user is None: raise credentials_exception
+    return {"username": username} # Повертаємо дані користувача з токена
+</code></pre>
+        <p><b>Використання в ендпоінті:</b></p>
+        <pre class="language-python"><code># main.py
+from . import auth
+
+@app.get("/users/profile/me")
+async def read_my_profile(current_user: dict = Depends(auth.get_current_user)):
+    # Якщо код дійшов сюди, це означає, що токен валідний.
+    # У current_user знаходяться дані з payload токена.
+    return current_user
+</code></pre>
+        <hr>
+        <h2>Приклад: ендпоінт для входу (отримання токена)</h2>
+        <p>Щоб система запрацювала, потрібен ендпоінт, де користувач може обміняти свій логін та пароль на токен.</p>
+        <p><b>Форма для запиту токена:</b><br>
+            FastAPI надає <code>OAuth2PasswordRequestForm</code> для зручності. Вона вимагає <code>username</code> та <code>password</code>.</p>
+        <pre class="language-python"><code># main.py
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+from datetime import timedelta
+from . import auth # Імпортуємо наш модуль auth
+
+app = FastAPI()
+
+@app.post("/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    # Тут має бути перевірка користувача в БД
+    # user = authenticate_user(form_data.username, form_data.password)
+    # Для прикладу вважаємо, що пароль вірний, якщо він не порожній
+    if not form_data.password: # Імітація перевірки
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+        )
+    # Створюємо токен для користувача
+    access_token = auth.create_access_token(
+        data={"sub": form_data.username, "roles": ["user"]} # "sub" — стандартне ім'я для суб'єкта
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+</code></pre>
+        <p>Тепер клієнт може надіслати POST-запит на <code>/token</code> з <code>username</code> та <code>password</code> і отримати у відповідь JWT.</p>
+        <hr>
+        <h2>Обмеження доступу за ролями</h2>
+        <p>Часто потрібно обмежити доступ до ендпоінтів на основі ролі користувача (наприклад, "admin", "manager", "user"). Інформацію про роль можна зберігати в <code>payload</code> JWT-токена.</p>
+        <p><b>Створення залежності для перевірки ролі:</b></p>
+        <pre class="language-python"><code># auth.py (продовження)
+def require_role(required_role: str):
+    async def role_checker(current_user: dict = Depends(get_current_user)):
+        roles = current_user.get("roles", [])
+        if required_role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to access this resource"
+            )
+        return current_user
+    return Depends(role_checker)
+</code></pre>
+        <p><b>Використання в ендпоінті:</b></p>
+        <pre class="language-python"><code># main.py
+from . import auth
+
+# Цей ендпоінт доступний лише користувачам з роллю 'admin' у токені
+@app.get("/admin/dashboard")
+async def get_admin_dashboard(admin_user: dict = auth.require_role("admin")):
+    return {"message": f"Welcome to the admin dashboard, {admin_user['username']}!"}
+
+# Цей ендпоінт доступний користувачам з роллю 'user'
+@app.get("/user/data")
+async def get_user_data(user: dict = auth.require_role("user")):
+    return {"data": "some user-specific data"}
+</code></pre>
+        <p>Цей підхід дозволяє створювати гнучку систему авторизації на основі ролей.</p>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

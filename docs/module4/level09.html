@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 9: Кешування та Redis у FastAPI</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 9: Кешування та Redis у FastAPI</h1>
+        <p>Повторювані ресурсоємні операції, будь то запити до бази даних чи зовнішніх API, неминуче сповільнюють чутливість вашого застосунку. Ми освоїмо <b>кешування</b> як фундаментальний метод оптимізації, а ключовим інструментом для цього стане <b>Redis</b> — високопродуктивна in-memory база даних типу 'ключ-значення', де-факто стандарт для кешування у вебі.</p>
+        <p>Ви дізнаєтеся, як Redis дозволяє отримувати дані за частки мілісекунд. Ми налаштуємо асинхронне підключення до Redis з <code>aioredis</code>, реалізуємо патерн "Cache-Aside" для ефективного кешування даних з БД, навчимося динамічно інвалідувати кеш при зміні вихідних даних та використовувати Redis для зберігання сесій користувачів.</p>
+        <p>Цей модуль дасть вам практичні навички для кардинального прискорення FastAPI-застосунків.</p>
+        <hr>
+        <h2>Що таке кешування і навіщо воно потрібне?</h2>
+        <p><b>Кешування</b> — це процес збереження результатів ресурсоємних операцій у швидкій пам'яті (кеші) для повторного використання. Замість того, щоб щоразу виконувати довгу операцію (наприклад, запит до бази даних чи зовнішнього API), застосунок спочатку перевіряє, чи є результат у кеші.</p>
+        <p><b>Навіщо це потрібно?</b></p>
+        <ul>
+            <li>дані зі швидкої пам'яті (RAM) читаються в десятки й сотні разів швидше, ніж із диска або через мережу. API відповідає майже миттєво.</li>
+            <li>зменшується кількість повторюваних запитів <code>SELECT</code>, що звільняє ресурси БД для важливіших операцій запису.</li>
+            <li>швидкі та адаптивні інтерфейси подобаються користувачам.</li>
+            <li>знижується навантаження на CPU та мережу, зменшуються витрати на зовнішні API.</li>
+        </ul>
+        <p><b>Потік запиту з кешем</b></p>
+        <div class="mermaid">
+            graph LR
+            A[Клієнтський запит] --> B{Дані є в кеші?};
+            B -- Так --> C[Взяти дані з кешу];
+            C --> F[Відповідь клієнту];
+            B -- Ні --> D["Запитати дані у джерела<br/>(БД / зовнішній API)"];
+            D --> E[Зберегти дані в кеш];
+            E --> C;
+
+            style C fill:#cfc,stroke:#333;
+            style D fill:#f99,stroke:#333;
+        </div>
+        <p>Якщо дані знайдено в кеші, повільний запит до джерела пропускається, і відповідь віддається миттєво.</p>
+        <hr>
+        <h2>Redis — швидкий кеш і не тільки</h2>
+        <p><b>Redis</b> (Remote Dictionary Server) — це високопродуктивна in-memory (що працює в оперативній пам'яті) база даних типу "ключ-значення". Завдяки своїй швидкості, вона є де-факто стандартом для кешування у веб-розробці.</p>
+        <p><b>Переваги Redis:</b></p>
+        <ul>
+            <li>операції читання та запису займають долі мілісекунди, оскільки всі дані знаходяться в RAM.</li>
+            <li>можна встановити "термін придатності" (TTL) для будь-якого ключа, після чого Redis автоматично його видалить.</li>
+            <li>на відміну від простих key-value сховищ, Redis підтримує рядки, списки, множини, хеші, відсортовані множини тощо.</li>
+            <li>дозволяє виконувати атомарні операції (наприклад, інкремент лічильника) без ризику race conditions (гонки даних).</li>
+            <li>може зберігати дані на диск для відновлення після перезапуску (persistence).</li>
+            <li>підтримує реплікацію та кластеризацію.</li>
+        </ul>
+        <hr>
+        <h2>Встановлення та підключення Redis до FastAPI</h2>
+        <p><b>1. Встановлення сервера Redis:</b></p>
+        <ul>
+            <li><p><b>Docker:</b></p>
+                <pre><code class="language-bash">docker run --name my-redis -d -p 6379:6379 redis
+</code></pre>
+            </li>
+        </ul>
+        <p><b>2. Встановлення Python-клієнта:</b><br>
+            Сучасна бібліотека <code>redis-py</code> (версії 4.2+) містить асинхронний клієнт <code>aioredis</code>.</p>
+        <pre><code class="language-bash">pip install "redis[hiredis]" # [hiredis] — для додаткової продуктивності
+pip freeze > requirements.txt
+</code></pre>
+        <p><b>3. Асинхронне підключення в FastAPI (<code>database.py</code> або <code>core/redis.py</code>):</b></p>
+        <pre class="language-python"><code>import redis.asyncio as redis
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+
+# --- Налаштування ---
+REDIS_URL = "redis://localhost:6379"
+
+# --- Lifespan для керування підключенням ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Підключаємося під час старту застосунку
+    app.state.redis = redis.from_url(REDIS_URL, decode_responses=True)
+    yield
+    # Закриваємо підключення при зупинці
+    await app.state.redis.close()
+
+# --- У main.py ---
+# app = FastAPI(lifespan=lifespan)
+# redis_client = app.state.redis # Доступ до клієнта
+</code></pre>
+        <p>Використання <code>lifespan</code> — це сучасний спосіб керувати ресурсами, які мають існувати протягом усього життєвого циклу застосунку.</p>
+        <hr>
+        <h2>Кешування запитів до бази даних</h2>
+        <p>Це найпоширеніший сценарій використання Redis.</p>
+        <p><b>Патерн "Cache-Aside":</b></p>
+        <ol>
+            <li>Згенерувати унікальний ключ для запиту.</li>
+            <li>Спробувати отримати дані за цим ключем із Redis.</li>
+            <li><b>Якщо дані в кеші є (cache hit):</b> повернути їх.</li>
+            <li><b>Якщо даних немає (cache miss):</b>
+                <ol type="a">
+                    <li>Зробити запит до основної бази даних.</li>
+                    <li>Серіалізувати отримані дані (наприклад, у JSON).</li>
+                    <li>Зберегти серіалізовані дані в Redis зі встановленим TTL.</li>
+                    <li>Повернути дані клієнту.</li>
+                </ol>
+            </li>
+        </ol>
+        <div class="mermaid">
+            graph TD
+            A[Клієнтський запит] --> B{Дані є в кеші?};
+            B -- Так (Cache Hit) --> C[Віддати дані з Redis];
+            C --> F[Відповідь клієнту];
+            B -- Ні (Cache Miss) --> D[Запитати дані з основної БД];
+            D --> E[Зберегти результат в Redis з TTL];
+            E --> F;
+
+            style C fill:#cfc,stroke:#333,stroke-width:2px;
+            style D fill:#f99,stroke:#333,stroke-width:2px;
+        </div>
+        <p><b>Приклад (ендпоінт для отримання списку товарів):</b></p>
+        <pre class="language-python"><code>import json
+from fastapi import Depends
+
+# ... (припускаємо, що redis_client доступний)
+
+@app.get("/products")
+async def get_products():
+    cache_key = "all_products"
+    # 1. Перевіряємо кеш
+    cached_products = await redis_client.get(cache_key)
+    if cached_products:
+        return json.loads(cached_products) # Повертаємо з кеша
+
+    # 2. Якщо в кеші немає — йдемо до БД
+    products_from_db = await get_all_products_from_db() # Функція для запиту до БД
+    products_json = json.dumps(products_from_db) # Серіалізуємо
+
+    # 3. Зберігаємо до кеша з TTL на 60 секунд
+    await redis_client.setex(cache_key, 60, products_json)
+
+    return products_from_db
+</code></pre>
+        <hr>
+        <h2>Динамічні ключі та інвалідація кеша</h2>
+        <p>Для кешування даних, що залежать від параметрів (наприклад, профіль конкретного користувача), ключ має бути унікальним.</p>
+        <pre class="language-python"><code># Добрий ключ для профілю користувача
+cache_key = f"user_profile:{user_id}"
+# Поганий ключ: "user_profile" — закешує дані лише одного користувача
+</code></pre>
+        <p>Коли вихідні дані в базі даних <b>змінюються</b> (UPDATE або DELETE), відповідний кеш стає <b>неактуальним</b>. Його необхідно видалити (інвалідувати).</p>
+        <p><b>Стратегії інвалідації:</b></p>
+        <ol>
+            <li><b>TTL (Time To Live):</b> найпростіша. Дані просто "протухнуть" після встановленого часу. Підходить, якщо некритично показувати трохи застарілі дані.</li>
+            <li><b>Явна інвалідація:</b> під час зміни даних у БД, ви явно видаляєте відповідний ключ із Redis.</li>
+        </ol>
+        <p><b>Приклад явної інвалідації:</b></p>
+        <pre class="language-python"><code>@app.put("/users/{user_id}")
+async def update_user(user_id: int, user_data: UserUpdate):
+    # ... (логіка оновлення користувача в БД) ...
+    updated_user = await update_user_in_db(user_id, user_data)
+
+    # Після успішного оновлення в БД, видаляємо старі дані з кеша
+    cache_key = f"user_profile:{user_id}"
+    await redis_client.delete(cache_key)
+
+    return updated_user
+</code></pre>
+        <hr>
+        <h2>Кешування користувацьких сесій</h2>
+        <p>Redis чудово підходить для зберігання даних сесій, особливо в розподілених системах, де у вас є кілька екземплярів FastAPI.</p>
+        <p><b>Процес:</b></p>
+        <ol>
+            <li>Після успішного логіна користувача генерується унікальний ID сесії (наприклад, UUID).</li>
+            <li>Дані користувача (або його ID) зберігаються в Redis за цим ID сесії як ключем. Встановлюється TTL (наприклад, година).</li>
+            <li>ID сесії надсилається клієнту (в cookie або в тілі відповіді).</li>
+            <li>Під час кожного запиту до захищених ендпоінтів клієнт передає свій ID сесії.</li>
+            <li>Сервер перевіряє наявність цього ID у Redis. Якщо ключ є — користувач автентифікований. Якщо ні — сесія завершилася або є невалідною.</li>
+        </ol>
+        <div class="mermaid">
+            sequenceDiagram
+            participant Client
+            participant FastAPI Server
+            participant Redis
+
+            Client->>FastAPI Server: Надсилання логіна/пароля
+            FastAPI Server->>FastAPI Server: Генерація session ID (UUID)
+            FastAPI Server->>Redis: Збереження session ID → дані користувача (TTL = 1 год)
+            FastAPI Server-->>Client: Повернення session ID (у cookie або тілі відповіді)
+
+            loop Кожен захищений запит
+            Client->>FastAPI Server: Надсилання session ID
+            FastAPI Server->>Redis: Перевірка session ID
+            alt Session ID знайдено
+            Redis-->>FastAPI Server: Дані користувача
+            FastAPI Server-->>Client: Доступ дозволено
+            else Session ID не знайдено
+            Redis-->>FastAPI Server: Немає даних
+            FastAPI Server-->>Client: Помилка аутентифікації
+            end
+            end
+        </div>
+        <p><b>Спрощений приклад:</b></p>
+        <pre class="language-python"><code>from uuid import uuid4
+from fastapi import Cookie, HTTPException, Response
+
+@app.post("/login")
+async def login(response: Response, username: str):
+    session_id = str(uuid4())
+    # Зберігаємо username в Redis на 1 годину (3600 с)
+    await redis.setex(f"session:{session_id}", 3600, username)
+    # Встановлюємо session_id в httpOnly cookie
+    response.set_cookie(key="session_id", value=session_id, httponly=True)
+    return {"message": "Успішний вхід"}
+
+@app.get("/profile/me")
+async def get_my_profile(session_id: str = Cookie(None)):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    username = await redis.get(f"session:{session_id}")
+    if not username:
+        raise HTTPException(status_code=401, detail="Session expired or invalid")
+    return {"username": username}
+</code></pre>
+        <hr>
+        <h2>Асинхронна взаємодія з <code>aioredis</code></h2>
+        <p>Усі операції з Redis в асинхронному застосунку мають бути асинхронними. <code>redis-py</code> надає для цього <code>asyncio</code> API.</p>
+        <p><b>Основні асинхронні методи:</b></p>
+        <ul>
+            <li><code>await redis.get(key)</code>: отримати значення за ключем.</li>
+            <li><code>await redis.set(key, value)</code>: встановити значення.</li>
+            <li><code>await redis.setex(key, ttl_seconds, value)</code>: встановити значення з TTL.</li>
+            <li><code>await redis.delete(key)</code>: видалити ключ.</li>
+            <li><code>await redis.incr(key)</code>: атомарно збільшити значення ключа на 1.</li>
+            <li><code>await redis.lpush(list_key, value)</code>: додати елемент на початок списку.</li>
+            <li><code>await redis.lrange(list_key, start, end)</code>: отримати зріз списку.</li>
+        </ul>
+        <p><b>Приклад:</b></p>
+        <pre class="language-python"><code>@app.post("/page-views/{page_slug}")
+async def increment_page_view(page_slug: str):
+    # Атомарно збільшуємо лічильник переглядів для сторінки
+    view_count = await redis.incr(f"page_views:{page_slug}")
+    return {"page": page_slug, "views": view_count}
+
+@app.get("/page-views/{page_slug}")
+async def get_page_view(page_slug: str):
+    view_count = await redis.get(f"page_views:{page_slug}")
+    return {"page": page_slug, "views": int(view_count or 0)}
+</code></pre>
+        <hr>
+        <h2>Політики витіснення та моніторинг</h2>
+        <p>Оскільки Redis зберігає дані в оперативній пам'яті, її обсяг обмежений. Що станеться, коли пам'ять закінчиться?</p>
+        <p><b>Політики витіснення (Eviction Policies):</b></p>
+        <ul>
+            <li>ви налаштовуєте в конфігурації Redis, як він має поводитися в разі нестачі пам'яті.</li>
+            <li><b><code>volatile-lru</code> (часто використовується для кеша):</b> видаляти ключі <i>зі встановленим TTL</i>, які найдовше не використовувались.</li>
+            <li><b><code>allkeys-lru</code>:</b> видаляти ключі, які найдовше не використовувались, <i>з-поміж усіх ключів</i>.</li>
+            <li><b><code>volatile-ttl</code>:</b> видаляти ключі з найменшим залишковим часом життя.</li>
+            <li><b><code>noeviction</code> (за замовчуванням):</b> нічого не видаляти, повертати помилку при спробі запису.</li>
+        </ul>
+        <p><b>Моніторинг:</b></p>
+        <ul>
+            <li>важливо стежити за станом Redis.</li>
+            <li><b><code>INFO MEMORY</code>:</b> команда для перегляду використання пам'яті.</li>
+            <li><b><code>MONITOR</code>:</b> команда для перегляду всіх виконуваних команд у реальному часі (для відладки).</li>
+            <li><b>Інструменти:</b> для продакшену використовуються системи моніторингу, такі як Prometheus з Redis Exporter та Grafana для візуалізації.</li>
+        </ul>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

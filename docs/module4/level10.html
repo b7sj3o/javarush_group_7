@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 10: SQL vs NoSQL та гібридні архітектури</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 10: SQL vs NoSQL та гібридні архітектури</h1>
+        <p>Вибір правильної бази даних — одне з найфундаментальніших архітектурних рішень, яке визначає масштабованість, продуктивність та гнучкість вашого застосунку. Ми проведемо глибокий порівняльний аналіз <b>SQL</b> (реляційних) та <b>NoSQL</b> (нереляційних) баз даних, а також розберемо концепції вертикального та горизонтального масштабування, які лежать в основі кожного підходу.</p>
+        <p>Ви зрозумієте, коли сувора цілісність SQL незамінна, а коли гнучкість та розподіленість NoSQL стають вирішальними перевагами. Особливу увагу приділимо <b>гібридним архітектурам</b>, які дозволяють поєднувати сильні сторони різних типів баз даних для вирішення специфічних задач, та розглянемо, як реалізувати їх у FastAPI, включаючи стратегії синхронізації даних через черги повідомлень.</p>
+        <hr>
+        <h2>SQL vs NoSQL — навіщо обирати?</h2>
+        <p><b>SQL</b> та <b>NoSQL</b> — це два фундаментально різні підходи до зберігання та управління даними. Вибір між ними (або рішення використовувати обидва) є одним із ключових архітектурних рішень, що впливає на гнучкість, продуктивність та масштабованість вашого проєкту.</p>
+        <img data-max-width="512" data-id="5d10e7e3-c208-4a34-b760-e331667622c3" src="https://cdn.javarush.com/images/article/5d10e7e3-c208-4a34-b760-e331667622c3/512.jpeg" alt="">
+        <p><b>SQL (Schema-on-Write):</b></p>
+        <ul>
+            <li>ви <b>спочатку</b> визначаєте строгу схему (таблиці, типи стовпців, зв'язки), і лише <b>потім</b> записуєте дані, які їй відповідають.</li>
+            <li><b>зміна структури</b> вимагає міграцій (<code>ALTER TABLE</code>), що може бути повільною операцією на великих таблицях.</li>
+            <li><b>гарантує</b> консистентність та передбачуваність даних.</li>
+        </ul>
+        <p><b>NoSQL (Schema-on-Read):</b></p>
+        <ul>
+            <li>ви можете записувати документи з <b>різною структурою</b> до однієї й тої самої колекції. Схема ніби "визначається" в момент читання даних вашим застосунком.</li>
+            <li><b>зміна структури</b> зводиться до того, що ваш код починає записувати документи з новими полями.</li>
+            <li><b>вимагає</b> більшої дисципліни на рівні застосунку, щоб уникнути хаосу в даних.</li>
+        </ul>
+        <p><b>Приклад: додати вік користувачу</b></p>
+        <ul>
+            <li><b>SQL:</b> <code>ALTER TABLE users ADD COLUMN age INT;</code> (міграція).</li>
+            <li><b>NoSQL (MongoDB):</b> <code>db.users.updateOne({"name": "Alice"}, {"$set": {"age": 30}})</code> (просто додаємо поле до документа).</li>
+        </ul>
+        <p>Не існує "кращого" варіанту — є інструмент, що найкраще підходить для конкретного завдання.</p>
+        <hr>
+        <h2>Масштабованість: вертикальна vs горизонтальна</h2>
+
+        <p><b>Вертикальне масштабування (Scale-Up) — типово для SQL:</b></p>
+        <ul>
+            <li>ви збільшуєте потужність <b>одного</b> сервера: додаєте CPU, RAM, швидші диски.</li>
+            <li>це просто до певної межі, але потім стає дуже дорого, і є фізичне "обмеження".</li>
+        </ul>
+        <p><b>Горизонтальне масштабування (Scale-Out) — типово для NoSQL:</b></p>
+        <ul>
+            <li>ви додаєте <b>більше</b> серверів (вузлів, нод) до кластера. Навантаження та дані розподіляються між ними.</li>
+            <li>потенційно безмежне масштабування, більш економічне на великих обсягах.</li>
+            <li>цей підхід називається <b>шардинг (sharding)</b>.</li>
+        </ul>
+
+        <p><b>Порівняння масштабування</b></p>
+        <div class="mermaid">
+            graph TD
+            subgraph Вертикальне (SQL)
+            S1[Сервер<br/>8 CPU<br/>16GB RAM] --> S2[Потужніший Сервер<br/>16 CPU<br/>64GB RAM];
+            end
+            subgraph Горизонтальне (NoSQL)
+            N1[Сервер 1] --> C[Кластер];
+            N2[Сервер 2] --> C;
+            N3[Сервер 3] --> C;
+            C --> N4[+ Сервер 4];
+            C --> N5[+ Сервер 5];
+            end
+        </div>
+        <p>SQL-бази зазвичай "ростуть вгору", NoSQL "ростуть вшир".</p>
+        <hr>
+        <h2>Коли обирати SQL?</h2>
+        <p>Використовуйте реляційні бази даних, коли ваш застосунок вимагає:</p>
+        <ul>
+            <li><b>високої цілісності та консистентності даних (ACID):</b> наприклад, для фінансових транзакцій, систем бронювання, інтернет-магазинів (замовлення, платежі).</li>
+            <li><b>складних запитів та зв'язків:</b> коли вам потрібні потужні <code>JOIN</code>, агрегації за кількома таблицями та складна фільтрація.</li>
+            <li><b>структурованих, передбачуваних даних:</b> коли структура ваших даних стабільна і рідко змінюється.</li>
+        </ul>
+        <p><b>Приклад транзакції (гарантія "все або нічого"):</b></p>
+        <pre><code class="language-sql">BEGIN;
+UPDATE accounts SET balance = balance - 100.00 WHERE user_id = 1;
+UPDATE accounts SET balance = balance + 100.00 WHERE user_id = 2;
+COMMIT;
+</code></pre>
+        <hr>
+        <h2>Коли обирати NoSQL?</h2>
+        <p>Використовуйте нереляційні бази даних, коли ваш застосунок характеризується:</p>
+        <ul>
+            <li><b>великими обсягами різнорідних або даних, що швидко змінюються:</b> наприклад, логи подій, користувацький контент, каталоги товарів з різними атрибутами.</li>
+            <li><b>необхідністю високої швидкості запису та читання:</b> наприклад, аналітика в реальному часі, ігрові таблиці лідерів, IoT.</li>
+            <li><b>гнучкою структурою даних:</b> коли ви не можете заздалегідь визначити всі поля або вони сильно відрізняються в різних документах.</li>
+            <li><b>вимогою до горизонтального масштабування та високої доступності.</b></li>
+        </ul>
+        <p><b>Приклад документа для поста в соцмережі (денормалізація):</b></p>
+        <pre><code class="language-json">{
+  "_id": "post123",
+  "author_username": "john_doe",
+  "content": "Обожнюю FastAPI!",
+  "likes_count": 42,
+  "first_five_comments": [
+    {"user": "jane", "text": "Клас!"},
+    {"user": "bob", "text": "Згоден!"}
+  ]
+}
+</code></pre>
+        <p><i>Тут <code>author_username</code> та <code>likes_count</code> денормалізовані (скопійовані), щоб уникнути додаткових запитів.</i></p>
+        <hr>
+        <h2>Гібридні архітектури: найкраще з обох світів</h2>
+        <p>Часто оптимальним рішенням є не вибір "або-або", а використання <b>гібридної архітектури</b>, де різні типи баз даних виконують ті завдання, для яких вони найкраще підходять.</p>
+        <p><b>Навіщо поєднувати?</b></p>
+        <ul>
+            <li>отримати баланс між надійністю SQL та гнучкістю/швидкістю NoSQL.</li>
+            <li>оптимізувати зберігання та обробку різних типів даних.</li>
+            <li>масштабувати різні частини системи незалежно.</li>
+        </ul>
+        <p><b>Типовий сценарій для e-commerce проєкту:</b></p>
+
+        <p><b>PostgreSQL (SQL):</b> зберігає основні, критично важливі дані:</p>
+        <ul>
+            <li>Профілі користувачів (автентифікація).</li>
+            <li>Замовлення та платіжні транзакції.</li>
+            <li>Основна інформація про товари (артикул, ціна).</li>
+        </ul>
+        <p><b>MongoDB (NoSQL):</b> зберігає менш структуровані та великі за обсягом дані:</p>
+        <ul>
+            <li>Відгуки про товари.</li>
+            <li>Користувацькі логи (перегляди, кліки).</li>
+            <li>Детальні атрибути товарів, що можуть змінюватись.</li>
+        </ul>
+        <p><b>Redis (NoSQL, In-memory):</b></p>
+        <ul>
+            <li>Кешування.</li>
+            <li>Користувацькі сесії.</li>
+            <li>Черги завдань.</li>
+        </ul>
+
+        <p><b>Гібридна архітектура</b></p>
+        <div class="mermaid">
+            graph LR
+            F[Застосунок FastAPI] --> PG[PostgreSQL];
+            F --> MDB[MongoDB];
+            F --> R[Redis];
+
+            subgraph SQL
+            PG --> U(Користувачі);
+            PG --> O(Замовлення);
+            end
+
+            subgraph NoSQL (Documents)
+            MDB --> L(Логи);
+            MDB --> RV(Відгуки);
+            end
+
+            subgraph NoSQL (In-memory)
+            R --> C(Кеш);
+            R --> S(Сесії);
+            end
+        </div>
+        <hr>
+        <h2>Реалізація гібридного підходу в FastAPI</h2>
+        <p>Ваш FastAPI-застосунок може одночасно працювати з кількома базами даних.</p>
+        <p><b>Приклад структури:</b></p>
+        <ul>
+            <li><code>database_sql.py</code>: налаштування SQLAlchemy та залежність <code>get_sql_session</code>.</li>
+            <li><code>database_nosql.py</code>: налаштування Motor та залежність <code>get_mongo_db</code>.</li>
+            <li><code>routers/orders.py</code>: ендпоінти для замовлень, використовують <code>get_sql_session</code>.</li>
+            <li><code>routers/logs.py</code>: ендпоінти для логів, використовують <code>get_mongo_db</code>.</li>
+        </ul>
+        <p><b>Приклад підключення в <code>main.py</code>:</b></p>
+        <pre class="language-python"><code>from fastapi import FastAPI
+from .routers import orders, logs
+
+app = FastAPI()
+
+# Підключаємо роутери, кожен з яких працює зі своєю БД
+app.include_router(orders.router, prefix="/orders", tags=["Orders"])
+app.include_router(logs.router, prefix="/logs", tags=["Logs"])
+</code></pre>
+        <p><b>Приклад використання в ендпоінтах:</b></p>
+        <pre class="language-python"><code># routers/orders.py
+@router.post("/")
+async def create_order(order: OrderCreate, session: AsyncSession = Depends(get_sql_session)):
+    # ... логіка з SQLAlchemy ...
+
+# routers/logs.py
+@router.post("/")
+async def create_log(log_entry: LogEntry, db: AsyncIOMotorDatabase = Depends(get_mongo_db)):
+    # ... логіка з Motor ...
+</code></pre>
+        <hr>
+        <h2>Синхронізація та обмін даними</h2>
+        <p>У гібридних системах іноді виникає потреба підтримувати дані в консистентному стані між різними базами.</p>
+        <p><b>Стратегії:</b></p>
+        <ol>
+            <li><b>Унікальні ідентифікатори:</b> використовуйте один і той самий ID для сутності в обох базах (наприклад, <code>user_id</code> з PostgreSQL зберігається в документах логів у MongoDB).</li>
+            <li><p><b>Подвійний запис (Dual Writes):</b> ваш застосунок під час зміни даних записує їх і в SQL, і в NoSQL базу.</p>
+                <ul>
+                    <li><b>мінус:</b> може бути ненадійно. Якщо один запис не вдався, дані стануть неконсистентними. Вимагає транзакцій або компенсуючих операцій.</li>
+                </ul>
+            </li>
+            <li><p><b>Асинхронна реплікація через черги повідомлень (Event-Driven):</b></p>
+                <ul>
+                    <li><b>найкращий підхід.</b></li>
+                    <li>застосунок записує зміни в основну базу (наприклад, SQL).</li>
+                    <li>одночасно він публікує подію (наприклад, "Замовлення створено") в черзі повідомлень (RabbitMQ, Kafka).</li>
+                    <li>інший сервіс-обробник (consumer) слухає цю чергу, отримує подію та оновлює дані в іншій базі (наприклад, NoSQL).</li>
+                </ul>
+            </li>
+        </ol>
+        <p><b>Event-Driven синхронізація</b></p>
+        <div class="mermaid">
+            sequenceDiagram
+            participant App as Застосунок FastAPI
+            participant SQL_DB as PostgreSQL
+            participant Broker as Брокер повідомлень (Kafka/RabbitMQ)
+            participant Consumer as Worker/Сервіс
+
+            App->>SQL_DB: 1. Зберегти Замовлення
+            SQL_DB-->>App: OK
+            App->>Broker: 2. Опублікувати подію "order_created"
+            Broker-->>Consumer: 3. Доставити подію
+            activate Consumer
+            Consumer->>Consumer: 4. Обробити подію
+            Consumer->>MDB as MongoDB: 5. Оновити аналітику/логи
+            deactivate Consumer
+        </div>
+        <hr>
+        <h2>Висновок: як обрати відповідну архітектуру?</h2>
+        <ul>
+            <li><b>Почніть з простого:</b> для більшості проєктів достатньо однієї бази даних. Обирайте ту, що краще підходить під основний тип ваших даних (найчастіше це PostgreSQL).</li>
+            <li><b>Оцініть вимоги:</b> проаналізуйте ваш проєкт. Чи є у вас дані з різною природою (транзакційні vs аналітичні)? Чи очікується вибуховий ріст обсягів неструктурованих даних?</li>
+            <li><b>Не бійтеся поєднувати:</b> гібридна архітектура — це потужний інструмент, а не ускладнення заради ускладнення. Вона дозволяє використовувати сильні сторони кожного типу баз даних.</li>
+            <li><b>Плануйте заздалегідь:</b> якщо ви припускаєте гібридний підхід, заздалегідь продумайте, як дані будуть розділені та як вони (за потреби) синхронізуватимуться.</li>
+        </ul>
+        <p>Пам'ятайте: архітектура має вирішувати ваші бізнес-завдання, а не бути самоціллю.</p>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

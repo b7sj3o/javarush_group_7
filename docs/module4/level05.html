@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 5: Тестування FastAPI-застосунків з Pytest</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 5: Тестування FastAPI-застосунків з Pytest</h1>
+        <p>Непротестований код — це код, який не працює. Забезпечення коректності та надійності вашого API є критично важливим. Ми освоїмо тестування FastAPI-застосунків, використовуючи <b><code>pytest</code></b> — де-факто стандарт для тестування у Python.</p>
+        <p>Ви дізнаєтеся, як <code>TestClient</code> дозволяє надсилати HTTP-запити до вашої аплікації без запуску реального веб-сервера, а фікстури <code>pytest</code> спростять підготовку тестових даних та об'єктів. Ми навчимося писати тести для різних HTTP-методів, перевіряти коректність обробки помилок, мокувати зовнішні API для ізоляції тестів, а також тестувати захищені ендпоінти з JWT.</p>
+        <p>Завершимо вивченням <b><code>pytest-cov</code></b> для аналізу покриття коду, що дозволить вам підтримувати високу якість API.</p>
+        <hr>
+        <h2>Інструменти для тестування FastAPI</h2>
+        <p>Для тестування FastAPI-застосунків ми використовуватимемо стандартний набір інструментів з екосистеми Python.</p>
+        <ul>
+            <li><b><code>pytest</code>:</b> де-факто стандарт для тестування в Python. Надає простий синтаксис на основі <code>assert</code>, потужну систему фікстур та плагінів.</li>
+            <li><p><b><code>TestClient</code>:</b> спеціальний клас, що надається FastAPI, для надсилання HTTP-запитів до вашого застосунку <i>безпосередньо</i>, без запуску реального вебсервера. Він працює на базі бібліотеки <code>httpx</code>.</p>
+            <li><b>імпорт:</b> <code>from fastapi.testclient import TestClient</code></li>
+            <li><b><code>httpx</code>:</b> сучасна асинхронна бібліотека для HTTP-запитів. <code>TestClient</code> використовує її "під капотом".</li>
+            <li><b><code>pytest-cov</code>:</b> плагін для <code>pytest</code> для вимірювання та аналізу <b>покриття коду тестами</b>.</li>
+        </ul>
+        <hr>
+        <h2>Організація тестів у проєкті</h2>
+        <p>Рекомендовано зберігати тести в окремій директорії <code>tests/</code> у корені вашого проєкту.</p>
+        <p><b>Приклад структури:</b></p>
+        <pre class="language-python"><code>my_fastapi_project/
+├── app/
+│   ├── __init__.py
+│   └── main.py       # Ваш код FastAPI
+├── tests/
+│   ├── __init__.py
+│   └── test_main.py  # Файл з тестами для main.py
+├── .env
+├── pytest.ini        # Файл налаштувань pytest
+└── requirements.txt
+</code></pre>
+        <p><b>Файл <code>pytest.ini</code></b> допомагає <code>pytest</code> знайти ваші тести та налаштувати його поведінку.</p>
+        <pre><code class="language-ini">[pytest]
+# Опції для запуску, наприклад, -v (verbose)
+addopts = -v
+# Вказуємо, де шукати тести
+testpaths = tests
+</code></pre>
+        <p><b>Файл з тестами (<code>tests/test_main.py</code>)</b>: імена файлів тестів повинні починатися з <code>test_</code>, а тестових функцій — також з <code>test_</code>.</p>
+        <hr>
+        <h2>TestClient та фікстури Pytest</h2>
+        <p><b><code>TestClient</code></b> імітує надсилання запитів до вашого FastAPI-застосунку. Його прийнято створювати один раз і перевикористовувати в тестах. Найкращий спосіб для цього — <b>фікстура pytest</b>.</p>
+        <p>Фікстури (<code>@pytest.fixture</code>) готують дані або об'єкти для тестів.</p>
+        <p><b>Приклад фікстури для <code>TestClient</code> та даних (можна розмістити у <code>tests/conftest.py</code> або в файлі з тестами):</b></p>
+        <pre class="language-python"><code>import pytest
+from fastapi.testclient import TestClient
+from app.main import app # Імпортуємо наш FastAPI-застосунок
+
+@pytest.fixture(scope="module") # scope="module" — фікстура створиться один раз для всіх тестів у модулі
+def client():
+    """ Фікстура для створення TestClient. """
+    with TestClient(app) as c:
+        yield c
+
+@pytest.fixture
+def user_payload():
+    """ Фікстура, що повертає дані для створення користувача. """
+    return {"id": 1, "name": "John Doe", "email": "john.doe@example.com"}
+</code></pre>
+        <p><b>Використання в тесті:</b></p>
+        <pre class="language-python"><code>def test_create_user(client, user_payload): # Pytest автоматично передасть фікстури
+    response = client.post("/users/", json=user_payload)
+    assert response.status_code == 201
+</code></pre>
+        <hr>
+        <h2>Тестування GET-запитів</h2>
+        <p>Під час тестування GET-запитів ми зазвичай перевіряємо статус-код відповіді та структуру/вміст отриманих даних.</p>
+        <pre class="language-python"><code># tests/test_main.py
+from fastapi.testclient import TestClient
+from app.main import app # Імпортуємо наш застосунок
+
+# Замість фікстури можна створити клієнт глобально
+# client = TestClient(app)
+
+def test_get_users_list(client): # Використовуємо фікстуру client
+    """ Тестуємо отримання списку користувачів """
+    response = client.get("/users")
+    assert response.status_code == 200 # Перевіряємо, що запит успішний
+    # Перевіряємо, що відповідь — це JSON, і вона містить ключ "users" зі списком
+    assert "users" in response.json()
+    assert isinstance(response.json()["users"], list)
+
+def test_query_params(client):
+    """ Тестуємо фільтрацію через query-параметри """
+    # Припускаємо, що /users?filter=Ali поверне тільки Alice
+    response = client.get("/users?filter=Ali")
+    assert response.status_code == 200
+    assert response.json() == {"users": ["Alice"]}
+</code></pre>
+        <hr>
+        <h2>Тестування POST-запитів</h2>
+        <p>Під час тестування POST-запитів ми перевіряємо успішне створення ресурсу з валідними даними та коректну обробку помилок з невалідними.</p>
+        <pre class="language-python"><code># tests/test_main.py
+
+def test_create_user_success(client, user_payload): # Використовуємо фікстури
+    """ Тестуємо успішне створення користувача """
+    response = client.post("/users/", json=user_payload) # Надсилаємо дані у форматі JSON
+    assert response.status_code == 201 # 201 Created — стандарт для успішного POST
+    assert response.json() == user_payload
+
+def test_create_user_with_duplicate_email(client, user_payload):
+    """ Тестуємо помилку при створенні користувача з існуючим email """
+    # 1. Спочатку успішно створюємо користувача
+    client.post("/users/", json=user_payload)
+
+    # 2. Намагаємося створити ще одного з тими ж даними
+    response = client.post("/users/", json=user_payload)
+    # Припускаємо, що API поверне помилку 400 Bad Request
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Email вже існує"}
+</code></pre>
+        <hr>
+        <h2>Мокування зовнішніх API</h2>
+        <p>Тести <b>не повинні</b> робити реальні запити до зовнішніх сервісів. Для ізоляції тестів використовується <b>мокування (mocking)</b> — заміна реальних об'єктів "заглушками".</p>
+        <p><b>Інструмент:</b> <code>unittest.mock</code> (вбудований у Python), зокрема декоратор <code>@patch</code>.</p>
+        <p><b>Приклад:</b> тестуємо ендпоінт, який звертається до зовнішнього API погоди.</p>
+        <pre class="language-python"><code># app/weather.py (код, який ми тестуємо)
+import httpx
+async def get_weather_data(city: str):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"https://api.weather.com/forecast/{city}")
+        response.raise_for_status() # Згенерує виняток, якщо статус не 2xx
+        return response.json()
+
+# tests/test_weather.py
+import pytest
+from unittest.mock import patch
+from app.weather import get_weather_data
+
+@pytest.mark.asyncio # Обов'язково для тестування async-функцій
+@patch("app.weather.httpx.AsyncClient.get") # Вказуємо шлях до методу, який хочемо замінити
+async def test_get_weather_data_mocked(mock_get):
+    """ Тестуємо функцію із замоканим httpx.get """
+    # Налаштовуємо mock-об'єкт: що він повинен повернути
+    mock_response_payload = {"city": "London", "temp": 15}
+    # Моделюємо успішну відповідь
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = mock_response_payload
+
+    # Викликаємо нашу функцію
+    result = await get_weather_data("London")
+
+    # Перевіряємо, що mock був викликаний із правильним URL
+    mock_get.assert_called_once_with("https://api.weather.com/forecast/London")
+    # Перевіряємо, що функція повернула дані з mock-відповіді
+    assert result == mock_response_payload
+</code></pre>
+        <hr>
+        <h2>Тестування обробки помилок</h2>
+        <p>Важливо перевіряти, що ваше API коректно обробляє помилки та повертає правильні статус-коди й повідомлення.</p>
+        <p><b>Тестування помилок клієнта (4xx):</b></p>
+        <pre class="language-python"><code>def test_read_item_not_found(client):
+    """ Перевіряємо відповідь 404 для неіснуючого об'єкта """
+    response = client.get("/items/999")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Елемент не знайдено"}
+
+def test_create_item_invalid_payload(client):
+    """ Перевіряємо відповідь 422 для невалідних даних (Pydantic) """
+    # Надсилаємо дані, що не відповідають Pydantic-моделі
+    invalid_payload = {"name": "TooShort", "price": "not_a_float"}
+    response = client.post("/items/", json=invalid_payload)
+    assert response.status_code == 422 # Помилка валідації
+    # Можна перевірити і вміст відповіді про помилки
+    assert "detail" in response.json()
+</code></pre>
+        <p><b>Тестування кастомних помилок:</b></p>
+        <pre class="language-python"><code>def test_transfer_amount_exceeds_limit(client):
+    """ Перевіряємо кастомну бізнес-логіку помилки """
+    # Припускаємо, що ліміт переказу $1000
+    response = client.post("/transfer", json={"amount": 1500.0})
+    assert response.status_code == 400 # Bad Request
+    assert response.json()["detail"] == "Сума переказу перевищує ліміт у $1000.00"
+</code></pre>
+        <hr>
+        <h2>Тестування аутентифікації через JWT</h2>
+        <p>Перевіряємо, що захищені ендпоїнти дійсно вимагають валідний токен.</p>
+        <p><b>1. Тест доступу без токена:</b></p>
+        <pre class="language-python"><code>def test_access_protected_route_no_token(client):
+    """ Спроба доступу до захищеного ресурсу без токена """
+    response = client.get("/protected-data")
+    assert response.status_code == 401 # Unauthorized
+    assert response.json()["detail"] == "Not authenticated"
+</code></pre>
+        <p><b>2. Тест доступу з невалідним токеном:</b></p>
+        <pre class="language-python"><code>def test_access_protected_route_invalid_token(client):
+    """ Спроба доступу з недійсним токеном """
+    headers = {"Authorization": "Bearer invalidtoken123"}
+    response = client.get("/protected-data", headers=headers)
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Could not validate credentials"
+</code></pre>
+        <p><b>3. Тест доступу з валідним токеном:</b></p>
+        <pre class="language-python"><code># Функція-хелпер або фікстура для отримання токена
+def get_valid_token(client):
+    # Імітуємо логін
+    response = client.post("/token", data={"username": "testuser", "password": "password"})
+    return response.json()["access_token"]
+
+def test_access_protected_route_valid_token(client):
+    """ Успішний доступ із валідним токеном """
+    token = get_valid_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    response = client.get("/protected-data", headers=headers)
+    assert response.status_code == 200
+    assert "secret_data" in response.json()
+</code></pre>
+        <hr>
+        <h2>Запуск тестів та аналіз покриття</h2>
+        <p><b>Test Coverage</b> — це метрика, що показує, який відсоток вашого коду виконався під час тестів.</p>
+        <p><b>Інструмент:</b> <code>pytest-cov</code></p>
+        <p><b>Встановлення:</b></p>
+        <pre><code class="language-bash">pip install pytest-cov
+</code></pre>
+        <p><b>Запуск із аналізом покриття в консолі:</b><br>
+            Ця команда запустить тести та покаже звіт про покриття для коду в папці <code>app</code>.</p>
+        <pre><code class="language-bash">pytest --cov=app
+</code></pre>
+        <p><b>Результат в консолі:</b></p>
+        <pre class="language-python"><code>----------- coverage: platform linux, python 3.10.4-final-0 -----------
+Name          Stmts   Miss  Cover
+---------------------------------
+app/main.py      50      5    90%
+---------------------------------
+TOTAL            50      5    90%
+</code></pre>
+        <p><b>Генерація HTML-звіту:</b></p>
+        <pre><code class="language-bash">pytest --cov=app --cov-report=html
+</code></pre>
+    <p>Ця команда створить папку <code>htmlcov/</code>. Відкрийте файл <code>htmlcov/index.html</code> у браузері, щоб побачити детальний інтерактивний звіт з підсвіткою непротестованих рядків коду.</p>
+    <p><b>Процес аналізу покриття</b></p>
+    <div class="mermaid">
+      graph LR
+      A[Запуск pytest --cov] --> B{Виконання тестів};
+      B --> C{Відстеження<br/>виконаних рядків коду};
+      C --> D[Порівняння з<br/>вихідним кодом];
+      D --> E[Генерація звіту Консоль / HTML];
+
+            style E fill:#cfc,stroke:#333;
+        </div>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>

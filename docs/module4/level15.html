@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="uk" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/slides.css" rel="stylesheet">
+    <script src="https://super-dev-styles.github.io/website-assets/slides.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link href="https://super-dev-styles.github.io/website-assets/styles.css" rel="stylesheet">
+    <link href="https://super-dev-styles.github.io/website-assets/view.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false });</script>
+    <title>Рівень 15: Обробка помилок та стійкість асинхронних систем</title>
+<!-- lesson-publisher:site -->
+<meta name="robots" content="noindex">
+<style>
+#lp-bar{display:none}
+#lp-all{position:fixed;top:20px;right:20px;z-index:1001;height:40px;box-sizing:border-box;
+display:inline-flex;align-items:center;padding:0 14px;border:1px solid #9b9b9b;border-radius:5px;
+background:#f7f7f7;color:#172b53;font:600 14px/1 Arial,Helvetica,sans-serif;text-decoration:none}
+#lp-all:hover{background:#ececec}
+#lp-all:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+@media (max-width:900px){
+body{padding:76px 0 88px!important}
+.slide-container{margin-left:0!important}
+.content{padding:1px 18px!important}
+.content h1{font-size:26px;line-height:1.2}
+.content pre{max-width:100%;overflow-x:auto}
+.content table{display:block;max-width:100%;overflow-x:auto}
+.content img,.content svg{max-width:100%;height:auto}
+#slide-menu{width:min(300px,86vw)!important;box-shadow:0 0 28px rgba(21,31,51,.22)}
+html:not(.lp-ready) #slide-menu{transition:none!important;transform:translateX(calc(-100% - 20px))!important}
+#lp-bar{display:block;position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+border-bottom:1px solid #e0e0e0;z-index:999}
+#menu-toggle{top:12px!important;left:14px!important}
+#lp-all{top:12px;right:14px}
+}
+</style>
+</head>
+<body>
+<div class="content lecture-content post-content">
+    <db-content>
+        <h1>Рівень 15: Обробка помилок та стійкість асинхронних систем</h1>
+        <p>Помилки у фонових задачах асинхронних систем можуть призводити до тихої втрати даних, завислих процесів та нескінченних циклів перезапусків, якщо не продумати надійну обробку. Ми сфокусуємося на критично важливій темі — створенні <b>стійких (resilient) асинхронних систем</b>, здатних коректно обробляти збої та відновлюватися після них.</p>
+        <p>Розберемося з патерном повторних спроб (retries) з <b>експоненційною затримкою</b>, які дозволяють системі самостійно справлятися з тимчасовими відмовами. Розберемо концепції черг 'мертвих листів' (DLQ) та <code>acks_late</code> у RabbitMQ для гарантованої доставки та запобігання втрати задач.</p>
+        <p>Також вивчимо таймаути, ефективне логування помилок з <code>exc_info=True</code> та інтеграцію із зовнішніми інструментами моніторингу, такими як <b>Sentry</b> та <b>ELK</b>, що забезпечить високий рівень відмовостійкості вашого застосунку та дасть повну картину того, що відбувається.</p>
+        <hr>
+        <h2>Чому обробка помилок в асинхронних системах є критично важливою?</h2>
+        <p>В асинхронних системах завдання виконуються у фоновому режимі, незалежно від основного застосунку. Якщо фонове завдання "падає" з помилкою, користувач про це не дізнається одразу. Без належної обробки помилок це може призвести до катастрофічних наслідків:</p>
+        <ul>
+            <li><b>тиха втрата даних:</b> замовлення не оброблено, лист не надіслано, але система вважає, що все гаразд.</li>
+            <li><b>завислі процеси:</b> воркер може "померти" через необроблений виняток, і всі завдання, які він узяв, будуть втрачені.</li>
+            <li><b>"листи щастя":</b> одне й те саме помилкове завдання може перезапускатися нескінченно, створювати навантаження на систему та спамити до логів.</li>
+        </ul>
+        <p>Ваше завдання як інженера — спроєктувати систему так, щоб вона була <b>стійкою (resilient)</b>, тобто вміла коректно обробляти збої та відновлюватися після них.</p>
+        <hr>
+        <h2>Основні підходи до обробки помилок</h2>
+        <p>Для побудови стійкої системи обробки фонових завдань ми використовуватимемо декілька ключових патернів:</p>
+        <ol>
+            <li><b>Черга "мертвих листів" (Dead Letter Queue — DLQ):</b> спеціальна черга, куди потрапляють повідомлення, які не вдалося обробити після декількох повторних спроб. Це дозволяє не втрачати "проблемні" завдання та аналізувати їх пізніше. <img data-max-width="800" data-id="859713a6-4438-41a6-a35d-54e27e2a2f8f" src="https://cdn.javarush.com/images/article/859713a6-4438-41a6-a35d-54e27e2a2f8f/800.jpeg" alt=""></li>
+            <li><b>Повторні спроби (Retries):</b> автоматичний перезапуск завдання, якщо воно завершилося з тимчасовою помилкою.
+                <img data-max-width="800" data-id="f8ed5e08-cec3-43ce-8aa7-c8908e8332e0" src="https://cdn.javarush.com/images/article/f8ed5e08-cec3-43ce-8aa7-c8908e8332e0/800.jpeg" alt="">
+            </li>
+            <li><b>Таймаути (Timeouts):</b> обмеження максимального часу виконання завдання, щоб воно не "зависало" назавжди.</li>
+            <li><b>Підтвердження (Acknowledgements — Acks):</b> механізм, що гарантує, що завдання буде видалено з черги лише після його успішної обробки.</li>
+            <li><b>Логування та Моніторинг:</b> збір інформації про помилки та стан системи для аналізу і своєчасного реагування.</li>
+        </ol>
+        <hr>
+        <h2>Підтвердження (<code>acks_late</code>) та DLQ в RabbitMQ</h2>
+        <p><b>Підтвердження (Acks):</b></p>
+        <ul>
+            <li>це механізм, за допомогою якого консюмер (воркер) повідомляє брокеру (RabbitMQ), що завдання оброблено.</li>
+            <li>за замовчуванням Celery надсилає <code>ack</code> <b>перед</b> виконанням завдання. Якщо воркер "впаде" під час виконання, завдання буде втрачено.</li>
+            <li><b><code>task_acks_late = True</code>:</b> критично важливе налаштування. Воно змушує Celery надсилати <code>ack</code> <b>лише після</b> успішного завершення завдання. Якщо воркер "впаде", брокер не отримає <code>ack</code> і передасть завдання іншому воркеру.</li>
+        </ul>
+        <p><b>Dead Letter Queue (DLQ):</b></p>
+        <ul>
+            <li>це "цвинтар" для повідомлень, які не вдалося обробити.</li>
+            <li>ви налаштовуєте основну чергу так, щоб після закінчення TTL або декількох відмов в обробці (<code>nack</code>) повідомлення перенаправлялося до іншої, спеціальної черги (DLQ).</li>
+            <li>це дозволяє ізолювати "погані" повідомлення від основної черги та проаналізувати їх пізніше, без зупинки обробки інших завдань.</li>
+        </ul>
+        <p><b>Потік обробки з <code>acks_late</code> та DLQ</b></p>
+        <div class="mermaid">
+            graph TD
+            A[Воркер бере завдання] --> B{Завдання виконано?};
+            B -- Так --> C[Надіслати ACK];
+            C --> D[Завдання видалено з черги];
+            B -- Ні (Помилка) --> E{task_acks_late=True?};
+            E -- Так --> F[ACK не надіслано];
+            F --> G{Досягнуто ліміт retries?};
+            G -- Ні --> H["Завдання повертається до черги<br/>(або іншому воркеру)"];
+            G -- Так --> I[Повідомлення потрапляє до DLQ];
+            E -- Ні (за замовч.) --> J[Завдання ВТРАЧЕНО!];
+
+            style J fill:#f99,stroke:#333,stroke-width:2px;
+            style I fill:#f9f,stroke:#333;
+        </div>
+        <p>Ця схема показує, як <code>acks_late</code> запобігає втраті завдань, а DLQ збирає ті, що не вдалося обробити після всіх спроб.</p>
+        <hr>
+        <h2>Повторні спроби (Retry) та таймаути в Celery</h2>
+        <p>Celery дозволяє легко налаштувати автоматичні повторні спроби для завдань, які можуть завершуватися з тимчасовими збоями (наприклад, мережеві помилки).</p>
+        <p><b>Налаштування через декоратор <code>@app.task</code>:</b></p>
+        <pre class="language-python"><code>@app.task(
+    bind=True,          # Обов'язково для використання self.retry
+    max_retries=3,      # Максимальна кількість повторних спроб
+    default_retry_delay=60, # Затримка в секундах між спробами
+    time_limit=300,     # "Жорсткий" таймаут: воркер буде вбитий через 300 с
+    soft_time_limit=290 # "М'який" таймаут: завдання отримає виняток SoftTimeLimitExceeded
+)
+def fetch_external_api(self, url):
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status() # Згенерує виняток для 4xx/5xx статусів
+        return response.json()
+    except requests.RequestException as exc:
+        # Перезапускаємо завдання через мережеву помилку
+        # Celery сам відстежить кількість спроб
+        raise self.retry(exc=exc)
+</code></pre>
+        <ul>
+            <li><b><code>bind=True</code>:</b> передає екземпляр завдання до <code>self</code>, що дає доступ до методу <code>.retry()</code>.</li>
+            <li><b><code>self.retry(exc=exc)</code>:</b> повідомляє Celery, що потрібно перезапустити це завдання. Початковий виняток <code>exc</code> передасться для логування.</li>
+        </ul>
+        <hr>
+        <h2>Експоненційна затримка (Exponential Backoff)</h2>
+        <p>Якщо зовнішнє API "впало", немає сенсу "довбати" його запитами щохвилини. Краще збільшувати інтервал між повторними спробами. Цей патерн називається <b>Exponential Backoff</b>.</p>
+        <p>Celery дозволяє легко його реалізувати, обчисливши затримку (<code>countdown</code>) на основі поточного номера спроби.</p>
+        <pre class="language-python"><code>@app.task(bind=True, max_retries=5)
+def fetch_data_with_backoff(self, url):
+    try:
+        # ... логіка запиту до API ...
+        return "Success"
+    except Exception as exc:
+        # Затримка буде: 2, 4, 8, 16, 32 секунди
+        countdown = 2 ** self.request.retries
+        print(f"Помилка, повтор через {countdown} секунд...")
+        raise self.retry(exc=exc, countdown=countdown)
+</code></pre>
+        <ul>
+            <li><code>self.request.retries</code>: номер поточної спроби (починається з 0).</li>
+            <li><code>countdown</code>: аргумент <code>.retry()</code>, що вказує затримку в секундах для <i>цієї конкретної</i> спроби.</li>
+        </ul>
+        <hr>
+        <h2>Логування помилок у Celery</h2>
+        <p>Якісне логування — ключ до розуміння того, що відбувається у ваших воркерах. Використовуйте стандартний модуль <code>logging</code> Python.</p>
+        <p><b>Налаштування логера:</b></p>
+        <pre class="language-python"><code>import logging
+
+# Зазвичай налаштовується в celery_app.py або settings.py
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Отримуємо логер для поточного модуля
+logger = logging.getLogger(__name__)
+
+@app.task(bind=True)
+def example_task(self, x, y):
+    try:
+        result = x / y
+        logger.info(f"Завдання {self.request.id}: {x} / {y} = {result}")
+        return result
+    except ZeroDivisionError as e:
+        # Логуємо помилку з рівнем ERROR
+        logger.error(f"Завдання {self.request.id}: Помилка ділення на нуль!", exc_info=True)
+        # Повторно генеруємо виняток, щоб Celery позначив завдання як FAILED
+        raise
+</code></pre>
+        <ul>
+            <li><code>self.request.id</code>: корисно логувати ID завдання для відстеження.</li>
+            <li><code>exc_info=True</code>: додає повний traceback винятку до логу, що дуже допомагає при налагодженні.</li>
+        </ul>
+        <hr>
+        <h2>Інтеграція із зовнішніми інструментами: Sentry, ELK</h2>
+        <p>Для серйозних проєктів локальних логів недостатньо. Використовуються централізовані системи збору та аналізу помилок.</p>
+        <p><b>Sentry:</b></p>
+        <ul>
+            <li>це сервіс для <b>агрегації та моніторингу помилок</b> у реальному часі.</li>
+            <li>він автоматично групує однакові помилки, збирає контекст (версія коду, параметри запиту) та надсилає сповіщення.</li>
+            <li>має чудову інтеграцію з Celery.</li>
+        </ul>
+        <pre class="language-python"><code>import sentry_sdk
+from sentry_sdk.integrations.celery import CeleryIntegration
+
+sentry_sdk.init(
+    dsn="ВАШ_DSN_ЗІ_SENTRY",
+    integrations=[CeleryIntegration()],
+    # ... інші налаштування ...
+)
+</code></pre>
+        <p><b>ELK-стек (Elasticsearch, Logstash, Kibana):</b></p>
+        <ul>
+            <li>це потужне рішення для <b>централізованого збору, зберігання та аналізу логів</b>.</li>
+            <li>ваші воркери пишуть логи до стандартного виведення або файлів, а спеціальні агенти (наприклад, Filebeat) збирають їх і надсилають до Logstash/Elasticsearch. Kibana надає вебінтерфейс для пошуку та візуалізації логів.</li>
+        </ul>
+
+        <hr>
+        <h2>Моніторинг: Flower та RabbitMQ Management</h2>
+        <p><b>Flower:</b> (Як ми вже обговорювали)</p>
+        <ul>
+            <li>дозволяє бачити <b>помилки та traceback-и</b> для завдань, що "впали" (<code>FAILED</code>), прямо у вебінтерфейсі.</li>
+            <li>допомагає відстежувати завдання, що перебувають у стані <code>RETRY</code>.</li>
+            <li><b>запуск:</b> <code>celery -A my_app flower</code></li>
+        </ul>
+
+        <p><b>RabbitMQ Management Plugin:</b></p>
+        <ul>
+            <li>дозволяє бачити <b>стан черг</b>. Якщо в якійсь черзі (особливо в DLQ) починають накопичуватися повідомлення, це явна ознака проблеми.</li>
+            <li>можна вручну "перевидати" повідомлення з DLQ назад до робочої черги після виправлення помилки.</li>
+        </ul>
+
+        <hr>
+        <h2>Запобігання дублюванню завдань</h2>
+        <p>У системах із <code>retry</code> та <code>acks_late</code> завдання може бути виконане більше одного разу. Ваша бізнес-логіка має бути до цього готова (<b>ідемпотентність</b>).</p>
+        <p>Якщо повторне виконання є критичним, можна реалізувати блокування на рівні завдання.</p>
+        <p><b>Приклад із використанням Redis:</b></p>
+        <pre class="language-python"><code># Використовуємо Redis як розподілене блокування
+from celery.exceptions import Ignore
+from redis.asyncio import Redis
+
+redis_client = Redis.from_url("redis://localhost:6379/2")
+
+@app.task(bind=True)
+def process_payment(self, order_id):
+    # Створюємо унікальний ключ блокування для цього завдання
+    lock_key = f"lock:process_payment:{order_id}"
+    # setnx (SET if Not eXists) — атомарна операція
+    is_lock_acquired = redis_client.setnx(lock_key, self.request.id)
+
+    if not is_lock_acquired:
+        logger.warning(f"Завдання для замовлення {order_id} вже в обробці. Пропускаємо.")
+        # Кажемо Celery не вважати це помилкою і не перезапускати
+        raise Ignore()
+
+    try:
+        # ... основна логіка обробки платежу ...
+        return "Success"
+    finally:
+        # Обов'язково знімаємо блокування в кінці
+        redis_client.delete(lock_key)
+</code></pre>
+        <hr>
+        <h2>Комплексна архітектура обробки помилок</h2>
+        <p><b>Підсумкова схема:</b></p>
+        <div class="mermaid">
+            graph TD
+            A[Продюсер] --> B((Основна Черга));
+            B --> C[Воркер Celery];
+            C --> D{Помилка?};
+            D -- Ні --> E[Успіх -> ACK];
+            D -- Так --> F{"Спроби (Retry) < Ліміту?"};
+            F -- Так --> G[Перезапуск із затримкою];
+            G --> B;
+            F -- Ні --> H((Dead Letter Queue - DLQ));
+            H --> I[Ручний аналіз /<br/>Перезапуск];
+            C -- Логи/Помилки --> J("Система Моніторингу<br/>Sentry / ELK / Flower");
+
+            style H fill:#f99,stroke:#333;
+            style J fill:#f9f,stroke:#333;
+        </div>
+        <p>Ця схема об'єднує всі розглянуті підходи:</p>
+        <ol>
+            <li>Завдання потрапляють до основної черги.</li>
+            <li>Воркер намагається їх виконати.</li>
+            <li>У разі тимчасових збоїв завдання перезапускається (<code>Retry</code>).</li>
+            <li>Після вичерпання спроб завдання потрапляє до <code>DLQ</code>.</li>
+            <li>Усі помилки та статуси логуються та надсилаються до системи моніторингу.</li>
+        </ol>
+        <hr>
+  </db-content>
+</div>
+<div id="lp-bar"></div><a id="lp-all" href="../#m4">← Усі лекції</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var c=document.querySelector('.slide-container');
+var narrow=window.matchMedia('(max-width: 900px)');
+function close(){if(c&&narrow.matches)c.classList.add('menu-collapsed')}
+close();
+var menu=document.getElementById('slide-menu');
+if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
+var content=document.querySelector('.content');
+if(content)content.addEventListener('click',close);
+requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
+},0)});
+</script>
+</body>
+</html>
