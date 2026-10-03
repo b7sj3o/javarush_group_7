@@ -403,6 +403,7 @@ var menu=document.getElementById('slide-menu');
 if(menu)menu.addEventListener('click',function(e){if(e.target.closest('a'))close()});
 var content=document.querySelector('.content');
 if(content)content.addEventListener('click',close);
+document.addEventListener('click',function(e){if(e.target.closest('#slide-navigation button,#slide-menu a'))window.scrollTo(0,0)});
 requestAnimationFrame(function(){document.documentElement.classList.add('lp-ready')});
 },0)});
 </script>
