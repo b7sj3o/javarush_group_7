@@ -17,3 +17,6 @@ __pycache__/
 *.pem
 *.key
 *.session
+
+# teacher's lecture notes — not for students
+materials/
