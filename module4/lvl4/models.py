@@ -8,6 +8,7 @@ from security import hash_password
 
 class Role(StrEnum):
     READER = "reader"
+    MANAGER = "manager"
     ADMIN = "admin"
 
 
@@ -31,6 +32,7 @@ class UserOut(BaseModel):
     name: str
     email: EmailStr
     role: Role
+    is_active: bool = True
 
 
 class User(UserOut):
@@ -41,8 +43,21 @@ users_db: dict[int, User] = {}
 user_seq = count(1)
 
 
-def add_user(name: str, email: str, password: str, role: Role = Role.READER) -> User:
-    user = User(id=next(user_seq), name=name, email=email, role=role, hashed_password=hash_password(password))
+def add_user(
+    name: str,
+    email: str,
+    password: str,
+    role: Role = Role.READER,
+    is_active: bool = True,
+) -> User:
+    user = User(
+        id=next(user_seq),
+        name=name,
+        email=email,
+        role=role,
+        is_active=is_active,
+        hashed_password=hash_password(password),
+    )
     users_db[user.id] = user
     return user
 
@@ -56,4 +71,7 @@ def get_user_by_email(email: str) -> User | None:
 
 # Стартові користувачі: хеші рахуються при запуску
 add_user("Адмін", "admin@library.ua", "admin12345", Role.ADMIN)
+add_user("Менеджер", "manager@library.ua", "manager12345", Role.MANAGER)
 add_user("Оля", "olia@example.com", "secret123")
+#щоб перевірити 403 для деактивованого
+add_user("Неактивний", "off@example.com", "secret123", is_active=False)
