@@ -39,6 +39,38 @@ class User(UserOut):
     hashed_password: str
 
 
+class UserNameUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str = Field(min_length=2, max_length=100)
+
+
+class PasswordChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    old_password: SecretStr
+    new_password: SecretStr = Field(min_length=8)
+    new_password_confirm: SecretStr
+
+    @model_validator(mode="after")
+    def passwords_match(self):
+        if self.new_password.get_secret_value() != self.new_password_confirm.get_secret_value():
+            raise ValueError("паролі не збігаються")
+        return self
+
+
+class RoleUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Role
+
+
+class ActiveUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    is_active: bool
+
+
 users_db: dict[int, User] = {}
 user_seq = count(1)
 
@@ -67,6 +99,9 @@ def get_user_by_email(email: str) -> User | None:
         if user.email.lower() == email.lower():
             return user
     return None
+
+def get_user_by_id(user_id: int) -> User | None:
+    return users_db.get(user_id)
 
 
 # Стартові користувачі: хеші рахуються при запуску
