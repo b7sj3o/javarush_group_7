@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from enum import StrEnum
 from itertools import count
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     AfterValidator,
@@ -204,3 +204,81 @@ books_db: dict[int, Book] = {
             genre=Genre.NOVEL, isbn="9789660312227", added_at=date(2026, 10, 3)),
 }
 book_seq = count(len(books_db) + 1)
+
+
+# ---------- Замовлення ----------
+
+class OrderStatus(StrEnum):
+    NEW = "new"
+    CONFIRMED = "confirmed"
+    ISSUED = "issued"
+    RETURNED = "returned"
+    CANCELLED = "cancelled"
+
+
+# Дозволені переходи; cancelled і returned кінцеві (порожня множина)
+ALLOWED_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
+    OrderStatus.NEW: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
+    OrderStatus.CONFIRMED: {OrderStatus.ISSUED, OrderStatus.CANCELLED},
+    OrderStatus.ISSUED: {OrderStatus.RETURNED},
+    OrderStatus.RETURNED: set(),
+    OrderStatus.CANCELLED: set(),
+}
+
+# Статуси, поки замовлення існує (книга зайнята)
+ACTIVE_STATUSES = {OrderStatus.NEW, OrderStatus.CONFIRMED, OrderStatus.ISSUED}
+
+
+class NovaPoshtaDelivery(BaseModel):
+    type: Literal["nova_poshta"]
+    city: str = Field(min_length=2)
+    warehouse: int = Field(ge=1)
+
+
+class CourierDelivery(BaseModel):
+    type: Literal["courier"]
+    address: str = Field(min_length=5)
+
+
+Delivery = Annotated[NovaPoshtaDelivery | CourierDelivery, Field(discriminator="type")]
+
+
+def check_not_in_past(value: date) -> date:
+    if value < date.today():
+        raise ValueError("дата доставки вже минула")
+    return value
+
+
+DeliveryDate = Annotated[date, AfterValidator(check_not_in_past)]
+
+
+class OrderCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    book_id: int = Field(ge=1)
+    delivery: Delivery
+    delivery_date: DeliveryDate
+
+
+class OrderUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    delivery: Delivery | None = None
+    delivery_date: DeliveryDate | None = None
+
+
+class Order(OrderCreate):
+    id: int
+    owner_id: int
+    status: OrderStatus = OrderStatus.NEW
+    created_at: datetime
+
+
+class OrderStatusUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: OrderStatus
+
+
+orders_db: dict[int, Order] = {}
+order_seq = count(1)
