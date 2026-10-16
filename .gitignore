@@ -9,6 +9,8 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+htmlcov/
+.coverage
 
 # secrets — never publish
 .env
