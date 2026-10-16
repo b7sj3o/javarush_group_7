@@ -4,14 +4,17 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from dependencies import CurrentUser, ManagerUser
+from dependencies import AdminUser, CurrentUser, ManagerUser
 from models import (
+    ALLOWED_TRANSITIONS,
     Order,
     OrderCreate,
     OrderStatus,
+    OrderStatusUpdate,
     OrderUpdate,
     Role,
     User,
+    books_db,
     order_seq,
     orders_db,
 )
@@ -40,6 +43,25 @@ def get_visible_order_or_404(order_id: int, user: User) -> Order:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Замовлення з id={order_id} не знайдено",
         )
+    return order
+
+
+def release_book(order: Order) -> None:
+    book = books_db.get(order.book_id)
+    if book is not None:
+        book.available = True
+
+
+def change_status(order: Order, new_status: OrderStatus) -> Order:
+    """Єдине місце, де міняється статус: перевірка переходу + звільнення книги."""
+    if new_status not in ALLOWED_TRANSITIONS[order.status]:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Перехід {order.status.value} → {new_status.value} недозволений",
+        )
+    order.status = new_status
+    if new_status in (OrderStatus.CANCELLED, OrderStatus.RETURNED):
+        release_book(order)
     return order
 
 
@@ -103,3 +125,26 @@ async def update_order(order_id: OrderId, data: OrderUpdate, user: CurrentUser):
     if data.delivery_date is not None:
         order.delivery_date = data.delivery_date
     return order
+
+
+@router.post("/{order_id}/cancel", response_model=Order)
+async def cancel_order(order_id: OrderId, user: CurrentUser):
+    order = get_visible_order_or_404(order_id, user)          # reader: чуже -> 404
+    return change_status(order, OrderStatus.CANCELLED)        # дозволено лише з new / confirmed
+
+
+@router.patch("/{order_id}/status", response_model=Order)
+async def update_order_status(order_id: OrderId, data: OrderStatusUpdate, user: ManagerUser):
+    order = get_order_or_404(order_id)
+    return change_status(order, data.status)
+
+
+@router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_order(order_id: OrderId, admin: AdminUser) -> None:
+    order = get_order_or_404(order_id)
+    if order.status not in (OrderStatus.CANCELLED, OrderStatus.RETURNED):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Видалити можна лише замовлення зі статусом cancelled або returned",
+        )
+    del orders_db[order_id]

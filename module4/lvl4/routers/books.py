@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from dependencies import AdminUser, ManagerUser
-from models import Book, BookCreate, BookUpdate, Genre, book_seq, books_db
+from models import ACTIVE_STATUSES, Book, BookCreate, BookUpdate, Genre, book_seq, books_db, orders_db
 
 router = APIRouter(prefix="/books", tags=["books"])
 
@@ -109,5 +109,9 @@ async def update_book(book_id: BookId, data: BookUpdate, user: ManagerUser):
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book(book_id: BookId, admin: AdminUser) -> None:
     get_book_or_404(book_id)
-    # TODO: 409, якщо в книги є замовлення зі статусом new / confirmed / issued
+    if any(o.book_id == book_id and o.status in ACTIVE_STATUSES for o in orders_db.values()):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="У книги є активні замовлення (new, confirmed, issued)",
+        )
     del books_db[book_id]
