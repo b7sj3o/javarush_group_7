@@ -9,7 +9,7 @@ from models import Role, User
 from repositories.users import UserRepository
 from security import decode_token
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 
 def _unauthorized(detail: str) -> HTTPException:
@@ -21,6 +21,7 @@ def _unauthorized(detail: str) -> HTTPException:
 
 
 async def get_current_user(session: SessionDep, token: str = Depends(oauth2_scheme)) -> User:
+    print(token)
     try:
         payload = decode_token(token)
     except jwt.ExpiredSignatureError:

@@ -27,7 +27,7 @@ class BookRepository:
         return await self.session.get(Book, book_id)
 
     async def list(self, filters: BookFilter) -> Sequence[Book]:
-        stmt = select(Book).join(Book.author)  # JOIN authors: фільтр за іменем автора
+        stmt = select(Book).join(Book.authors)  # JOIN authors: фільтр за іменем автора
         if filters.author:
             stmt = stmt.where(func.lower(Author.name).contains(filters.author.lower()))
         if filters.q:
