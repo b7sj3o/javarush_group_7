@@ -17,6 +17,7 @@ dependencies = [
     "pyjwt>=2.15.1",
     "pymongo>=4.19.0",
     "python-multipart>=0.0.32",
+    "redis[hiredis]>=8.1.0",
     "sqlalchemy[asyncio]>=2.1.5",
     "uvicorn[standard]>=0.54.0",
 ]
