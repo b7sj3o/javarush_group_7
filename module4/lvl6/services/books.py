@@ -5,7 +5,7 @@ from fastapi import Depends
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
-from database import SessionDep
+from dependencies import SessionDep
 from exceptions import ConflictError, NotFoundError
 from models import Author, Book
 from repositories.books import AuthorRepository, BookRepository

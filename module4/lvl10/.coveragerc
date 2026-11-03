@@ -1,0 +1,3 @@
+[run]
+omit = tests/*, alembic/*
+concurrency = greenlet, thread

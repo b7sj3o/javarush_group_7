@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from database import SessionDep
+from dependencies import SessionDep
 from exceptions import ConflictError, NotFoundError
 from models import ALLOWED_TRANSITIONS, Order, OrderStatus, Role, User
 from repositories.books import BookRepository

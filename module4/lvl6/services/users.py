@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from database import SessionDep
+from dependencies import SessionDep
 from exceptions import BadRequestError, ConflictError, NotFoundError
 from models import Role, User
 from repositories.users import UserRepository

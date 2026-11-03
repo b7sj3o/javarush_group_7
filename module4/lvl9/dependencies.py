@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from redis.asyncio import Redis
 
-from database import SessionDep
+from dependencies import SessionDep
 from redis_client import get_redis_client
 from models import Role, User
 from repositories.users import UserRepository

@@ -4,7 +4,7 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from database import SessionDep
+from dependencies import SessionDep
 from models import Role, User
 from repositories.users import UserRepository
 from security import decode_token
