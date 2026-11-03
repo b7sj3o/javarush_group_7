@@ -92,10 +92,10 @@ border-bottom:1px solid #e0e0e0;z-index:999}
         <p><b>Порівняння масштабування</b></p>
         <div class="mermaid">
             graph TD
-            subgraph Вертикальне (SQL)
+            subgraph vertical ["Вертикальне (SQL)"]
             S1[Сервер<br/>8 CPU<br/>16GB RAM] --> S2[Потужніший Сервер<br/>16 CPU<br/>64GB RAM];
             end
-            subgraph Горизонтальне (NoSQL)
+            subgraph horizontal ["Горизонтальне (NoSQL)"]
             N1[Сервер 1] --> C[Кластер];
             N2[Сервер 2] --> C;
             N3[Сервер 3] --> C;
@@ -182,12 +182,12 @@ COMMIT;
             PG --> O(Замовлення);
             end
 
-            subgraph NoSQL (Documents)
+            subgraph nosql_docs ["NoSQL (Documents)"]
             MDB --> L(Логи);
             MDB --> RV(Відгуки);
             end
 
-            subgraph NoSQL (In-memory)
+            subgraph nosql_mem ["NoSQL (In-memory)"]
             R --> C(Кеш);
             R --> S(Сесії);
             end
