@@ -87,7 +87,10 @@ async def create_book(data: BookCreate, user: ManagerUser):
 @router.put("/{book_id}", response_model=Book)
 async def replace_book(book_id: BookId, data: BookCreate, user: ManagerUser):
     old = get_book_or_404(book_id)
-    book = Book(id=book_id, added_at=old.added_at, **data.model_dump())
+    payload = data.model_dump()
+    if "available" not in data.model_fields_set:      # не передали -> лишаємо як було
+        payload["available"] = old.available
+    book = Book(id=book_id, added_at=old.added_at, **payload)
     books_db[book_id] = book
     return book
 
@@ -95,7 +98,8 @@ async def replace_book(book_id: BookId, data: BookCreate, user: ManagerUser):
 @router.patch("/{book_id}", response_model=Book)
 async def update_book(book_id: BookId, data: BookUpdate, user: ManagerUser):
     book = get_book_or_404(book_id)
-    merged = {**book.model_dump(), **data.model_dump(exclude_none=True)}
+    changes = data.model_dump(exclude_unset=True)
+    merged = {**book.model_dump(), **changes}
     try:
         updated = Book.model_validate(merged)      # повна перевірка, разом із model_validator
     except ValidationError as e:
