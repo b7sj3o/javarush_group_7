@@ -5,11 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aio-pika>=10.2.3",
     "aiosqlite>=0.22.1",
     "alembic>=1.20.1",
     "asyncpg>=0.32.0",
     "email-validator>=2.3.0",
     "fastapi>=0.142.2",
+    "faststream[cli,rabbit,rabbitmq]>=0.7.8",
     "httpx>=0.28.1",
     "psycopg[async,asyncpg,binary]>=3.3.6",
     "pwdlib[argon2]>=0.3.1",
