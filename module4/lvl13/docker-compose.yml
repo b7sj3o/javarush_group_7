@@ -1,0 +1,18 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: my-rabbit
+    ports:
+      - "5672:5672"    # AMQP: Celery і наш код
+      - "15672:15672"  # вебінтерфейс, guest / guest
+
+  redis:
+    image: redis:8
+    ports:
+      - "6379:6379" 
+
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    ports:
+      - "1025:1025"    # SMTP: сюди надсилає наш код
+      - "8025:8025"    # вебскринька: http://localhost:8025
