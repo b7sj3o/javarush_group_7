@@ -1,0 +1,58 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: my-rabbit
+    ports:
+      - "5672:5672"    # AMQP: Celery і наш код
+      - "15672:15672"  # вебінтерфейс, guest / guest
+
+  redis:
+    image: redis:8
+    ports:
+      - "6379:6379" 
+
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    ports:
+      - "1025:1025"    # SMTP: сюди надсилає наш код
+      - "8025:8025"    # вебскринька: http://localhost:8025
+
+  # worker-linux-1:
+  #   build: .
+  #   command: celery -A celery_app worker -l info -c 1
+  #   environment:
+  #     BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+  #     RESULT_BACKEND: redis://redis:6379/1
+  #     SMTP_HOST: mailpit
+  #   depends_on:
+  #     - rabbitmq
+  #     - redis
+
+
+  # worker-linux-2:
+  #   build: .
+  #   command: celery -A celery_app worker -l info -c 1 -Q reports
+  #   environment:
+  #     BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+  #     RESULT_BACKEND: redis://redis:6379/1
+  #     SMTP_HOST: mailpit
+  #   depends_on:
+  #     - rabbitmq
+  #     - redis
+
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    # depends_on:
+      # - worker-linux-1
+      # - worker-linux-2
+    env_file:
+      - .env
+    environment:
+      BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+      RESULT_BACKEND: redis://redis:6379/1
+      SMTP_HOST: mailpit
